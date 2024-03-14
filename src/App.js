@@ -4,6 +4,7 @@ import {
   produtosIniciaisAlimentos,
   produtosIniciaisLimpeza,
 } from "./utils/ProdutosIniciais";
+import ComponenteTabela from "./components/ComponenteTabela";
 
 const CHAVE_LOCAL_STORAGE_ALIMENTOS = "produtosAlimentosLocalStorage";
 const CHAVE_LOCAL_STORAGE_LIMPEZA = "produtosLimpezaLocalStorage";
@@ -25,19 +26,59 @@ function App() {
     );
 
     if (produtosAlimentosLocalStorage && produtosLimpezaLocalStorage) {
-      setProdutosAlimentos(produtosAlimentosLocalStorage);
-      setProdutosLimpeza(produtosAlimentosLocalStorage);
+      setProdutosAlimentos(JSON.parse(produtosAlimentosLocalStorage));
+      setProdutosLimpeza(JSON.parse(produtosLimpezaLocalStorage));
     }
 
-    return () => atualizarLocalStorage();
-  });
+    // return () => {
+    //   atualizarLocalStorage();
+    // };
+  }, []);
 
-  const atualizarLocalStorage = () => {
+  const atualizarLocalStorage = (produtosAlimentos, produtosLimpeza) => {
+    console.log("fechou");
     localStorage.removeItem(CHAVE_LOCAL_STORAGE_ALIMENTOS);
     localStorage.removeItem(CHAVE_LOCAL_STORAGE_LIMPEZA);
 
-    localStorage.setItem(CHAVE_LOCAL_STORAGE_ALIMENTOS, produtosAlimentos);
-    localStorage.setItem(CHAVE_LOCAL_STORAGE_LIMPEZA, produtosLimpeza);
+    localStorage.setItem(
+      CHAVE_LOCAL_STORAGE_ALIMENTOS,
+      JSON.stringify(produtosAlimentos)
+    );
+    localStorage.setItem(
+      CHAVE_LOCAL_STORAGE_LIMPEZA,
+      JSON.stringify(produtosLimpeza)
+    );
+  };
+
+  const onChangeAlimentos = (valor, produto, idCampo) => {
+    let listaProdutos = [...produtosAlimentos];
+    listaProdutos = atualizarLista(valor, produto, idCampo, listaProdutos);
+
+    setProdutosAlimentos(listaProdutos);
+    atualizarLocalStorage(listaProdutos, produtosLimpeza);
+  };
+
+  const onChangeLimpeza = (valor, produto, idCampo) => {
+    let listaProdutos = [...produtosLimpeza];
+    listaProdutos = atualizarLista(valor, produto, idCampo, listaProdutos);
+
+    setProdutosLimpeza(listaProdutos);
+    atualizarLocalStorage(produtosAlimentos, listaProdutos);
+  };
+
+  const atualizarLista = (valor, produto, idCampo, listaProdutos) => {
+    const objParaAtualizar = listaProdutos.find(
+      (prod) => prod.produto === produto.produto
+    );
+
+    const index = listaProdutos.indexOf(objParaAtualizar);
+
+    listaProdutos[index] = {
+      ...listaProdutos[index],
+      [idCampo]: valor,
+    };
+
+    return listaProdutos;
   };
 
   return (
@@ -51,111 +92,16 @@ function App() {
           justifyContent: "center",
         }}
       >
-        <div>
-          <h2>Alimentos</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Ja pegou?</th>
-                <th>Quantidade</th>
-                <th>Produto</th>
-                <th>Preço</th>
-              </tr>
-            </thead>
-            <tbody>
-              {produtosAlimentos.map((prod) => (
-                <tr>
-                  <td>
-                    <input
-                      type="checkbox"
-                      id="jaPegou"
-                      name="jaPegou"
-                      checked={prod.jaPegou}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      id="qte"
-                      name="qte"
-                      min="0"
-                      max="99"
-                      value={prod.qte}
-                    />
-                  </td>
-                  <td>{prod.produto}</td>
-                  <td>
-                    <input
-                      type="number"
-                      id="preco"
-                      name="preco"
-                      value={prod.preco}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td>Total:</td>
-                <td>100</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-
-        <div>
-          <h2>Limpeza</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Ja pegou?</th>
-                <th>Quantidade</th>
-                <th>Produto</th>
-                <th>Preço</th>
-              </tr>
-            </thead>
-            <tbody>
-              {produtosLimpeza.map((prod) => (
-                <tr>
-                  <td>
-                    <input
-                      type="checkbox"
-                      id="jaPegou"
-                      name="jaPegou"
-                      checked={prod.jaPegou}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      id="qte"
-                      name="qte"
-                      min="0"
-                      max="99"
-                      value={prod.qte}
-                    />
-                  </td>
-                  <td>{prod.produto}</td>
-                  <td>
-                    <input
-                      type="number"
-                      id="preco"
-                      name="preco"
-                      value={prod.preco}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td>Total:</td>
-                <td>100</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+        <ComponenteTabela
+          titulo={"Alimentos"}
+          produtos={produtosAlimentos}
+          onChange={onChangeAlimentos}
+        />
+        <ComponenteTabela
+          titulo={"Limpeza"}
+          produtos={produtosLimpeza}
+          onChange={onChangeLimpeza}
+        />
       </div>
     </div>
   );
