@@ -17,6 +17,10 @@ function App() {
     produtosIniciaisLimpeza
   );
 
+  const [showInpuNovoProd, setShowInpuNovoProd] = useState(false);
+  const [produtoNovo, setProdutoNovo] = useState("");
+  const [produtoEditado, setProdutoEditado] = useState("");
+
   useEffect(() => {
     const produtosAlimentosLocalStorage = localStorage.getItem(
       CHAVE_LOCAL_STORAGE_ALIMENTOS
@@ -81,27 +85,88 @@ function App() {
     return listaProdutos;
   };
 
+  const adicionarProduto = () => {
+    setShowInpuNovoProd(true);
+  };
+
+  const adicionarProdutoNaoPadrao = () => {
+    const newProduto = {
+      jaPegou: false,
+      qte: 0,
+      produto: produtoNovo,
+      preco: 0,
+      isAdicional: true,
+    };
+    const novaLista = produtosLimpeza;
+    novaLista.push(newProduto);
+    atualizarStates(novaLista, setProdutoNovo);
+  };
+
+  const atualizarProdutoNaoPadrao = () => {
+    const novaLista = produtosLimpeza.map((it) => {
+      if (it.produto === produtoEditado) {
+        it.produto = produtoNovo;
+      }
+      return it;
+    });
+    atualizarStates(novaLista, setProdutoEditado);
+  };
+
+  const atualizarStates = (lista, funcaoSetState) => {
+    setProdutosLimpeza(lista);
+    atualizarLocalStorage(produtosAlimentos, lista);
+    setShowInpuNovoProd(false);
+    funcaoSetState("");
+  };
+
+  const editarProdutoNaoPadrao = (prod) => {
+    setShowInpuNovoProd(true);
+    setProdutoNovo(prod);
+    setProdutoEditado(prod);
+  };
+
+  const excluirProdutoNaoPadrao = (produto) => {
+    const novaLista = produtosLimpeza.filter((it) => it.produto !== produto);
+    setProdutosLimpeza(novaLista);
+    atualizarLocalStorage(produtosAlimentos, novaLista);
+  };
+
   return (
     <div>
       <h1>Lista de compras</h1>
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "row",
-          gap: "500px",
-          justifyContent: "center",
-        }}
-      >
+      <div>
         <ComponenteTabela
           titulo={"Alimentos"}
           produtos={produtosAlimentos}
           onChange={onChangeAlimentos}
+          onClickEditProduto={editarProdutoNaoPadrao}
+          onClickRemoverProduto={excluirProdutoNaoPadrao}
         />
         <ComponenteTabela
           titulo={"Limpeza"}
           produtos={produtosLimpeza}
           onChange={onChangeLimpeza}
+          onClickEditProduto={editarProdutoNaoPadrao}
+          onClickRemoverProduto={excluirProdutoNaoPadrao}
         />
+        <button onClick={adicionarProduto}>+</button>
+        {showInpuNovoProd && (
+          <>
+            <input
+              type="text"
+              id="novoProduto"
+              name="novoProduto"
+              onChange={(e) => setProdutoNovo(e.target.value)}
+              value={produtoNovo}
+            />
+            {produtoEditado.length <= 0 && (
+              <button onClick={adicionarProdutoNaoPadrao}>Adicionar</button>
+            )}
+            {produtoEditado.length > 0 && (
+              <button onClick={atualizarProdutoNaoPadrao}>Atualizar</button>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

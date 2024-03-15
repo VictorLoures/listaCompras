@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 
-const ComponenteTabela = ({ titulo, produtos, onChange }) => {
+const ComponenteTabela = ({
+  titulo,
+  produtos,
+  onChange,
+  onClickEditProduto,
+  onClickRemoverProduto,
+}) => {
   const onChangeCampo = (valor, produto, idCampo) => {
     onChange(valor, produto, idCampo);
   };
@@ -27,20 +33,23 @@ const ComponenteTabela = ({ titulo, produtos, onChange }) => {
                   name="jaPegou"
                   checked={prod.jaPegou}
                   onChange={(e) =>
-                    onChangeCampo(e.target.value === "on", prod, "jaPegou")
+                    onChangeCampo(e.target.checked, prod, "jaPegou")
                   }
                 />
               </td>
               <td>
-                <input
-                  type="number"
-                  id="qte"
-                  name="qte"
-                  min="0"
-                  max="99"
-                  value={prod.qte}
-                  onChange={(e) => onChangeCampo(e.target.value, prod, "qte")}
-                />
+                <button
+                  onClick={() => onChangeCampo(prod.qte - 1, prod, "qte")}
+                  disabled={prod.qte < 1}
+                >
+                  -
+                </button>
+                <label>{prod.qte}</label>
+                <button
+                  onClick={() => onChangeCampo(prod.qte + 1, prod, "qte")}
+                >
+                  +
+                </button>
               </td>
               <td>{prod.produto}</td>
               <td>
@@ -51,24 +60,20 @@ const ComponenteTabela = ({ titulo, produtos, onChange }) => {
                   value={prod.preco}
                   onChange={(e) => onChangeCampo(e.target.value, prod, "preco")}
                 />
+                {prod.isAdicional && (
+                  <>
+                    <button onClick={() => onClickEditProduto(prod.produto)}>
+                      Editar
+                    </button>
+                    <button onClick={() => onClickRemoverProduto(prod.produto)}>
+                      Remover
+                    </button>
+                  </>
+                )}
               </td>
             </tr>
           ))}
         </tbody>
-        <tfoot>
-          <tr>
-            <td>
-              Valor total:{" "}
-              {produtos
-                .map((it) => Number(it.preco))
-                .reduce((v1, v2) => v1 + v2)
-                .toLocaleString("pt-BR", {
-                  style: "currency",
-                  currency: "BRL",
-                })}
-            </td>
-          </tr>
-        </tfoot>
       </table>
     </div>
   );
