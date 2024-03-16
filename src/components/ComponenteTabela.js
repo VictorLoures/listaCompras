@@ -57,7 +57,7 @@ const ComponenteTabela = ({
               </td>
               <td>
                 <input
-                  type="text"
+                  type="tel"
                   id="preco"
                   name="preco"
                   value={prod.preco}
