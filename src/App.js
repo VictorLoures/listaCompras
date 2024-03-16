@@ -106,7 +106,7 @@ function App() {
       jaPegou: false,
       qte: 0,
       produto: produtoNovo,
-      preco: 0,
+      preco: "R$ 0,00",
       isAdicional: true,
     };
     const novaLista = produtosLimpeza;
