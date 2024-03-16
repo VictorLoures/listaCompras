@@ -6,6 +6,7 @@ const ComponenteTabela = ({
   onChange,
   onClickEditProduto,
   onClickRemoverProduto,
+  estiloDisplay,
 }) => {
   const onChangeCampo = (valor, produto, idCampo) => {
     onChange(valor, produto, idCampo);
@@ -25,7 +26,7 @@ const ComponenteTabela = ({
         </thead>
         <tbody>
           {produtos.map((prod) => (
-            <tr>
+            <tr style={prod.qte == 0 ? estiloDisplay : {}}>
               <td>
                 <input
                   type="checkbox"
@@ -51,10 +52,12 @@ const ComponenteTabela = ({
                   +
                 </button>
               </td>
-              <td>{prod.produto}</td>
+              <td style={{ color: prod.qte == 0 ? "#e61919" : "" }}>
+                {prod.produto}
+              </td>
               <td>
                 <input
-                  type="number"
+                  type="text"
                   id="preco"
                   name="preco"
                   value={prod.preco}
