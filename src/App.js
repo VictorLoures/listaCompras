@@ -157,7 +157,7 @@ function App() {
   return (
     <div>
       <h1>Lista de compras</h1>
-      <div>
+      <div className="container">
         <ComponenteTabela
           titulo={"Alimentos"}
           produtos={produtosAlimentos}
@@ -174,30 +174,62 @@ function App() {
           onClickRemoverProduto={excluirProdutoNaoPadrao}
           estiloDisplay={estiloDisplay}
         />
-        <button onClick={adicionarProduto}>+</button>
-        <button onClick={ocultaDesocultarProdutos}>
-          Ocultar / Descoultar produtos que não precisam{" "}
-        </button>
-        <button onClick={reset}>
-          Voltar aos valores padrão(resetar a lista)
-        </button>
-        {showInpuNovoProd && (
-          <>
-            <input
-              type="text"
-              id="novoProduto"
-              name="novoProduto"
-              onChange={(e) => setProdutoNovo(e.target.value)}
-              value={produtoNovo}
-            />
-            {produtoEditado.length <= 0 && (
-              <button onClick={adicionarProdutoNaoPadrao}>Adicionar</button>
-            )}
-            {produtoEditado.length > 0 && (
-              <button onClick={atualizarProdutoNaoPadrao}>Atualizar</button>
-            )}
-          </>
-        )}
+        <div className="acoes">
+          <button onClick={adicionarProduto} className="button-reset">
+            <div>
+              <i class="bi bi-plus-square" style={{ fontSize: "24px" }}></i>
+            </div>
+          </button>
+          {showInpuNovoProd && (
+            <>
+              <input
+                type="text"
+                id="novoProduto"
+                name="novoProduto"
+                onChange={(e) => setProdutoNovo(e.target.value)}
+                value={produtoNovo}
+              />
+              {produtoEditado.length <= 0 && (
+                <button
+                  onClick={adicionarProdutoNaoPadrao}
+                  className="button-reset"
+                >
+                  <i
+                    class="bi bi-arrow-right-square"
+                    style={{ fontSize: "24px" }}
+                  ></i>
+                </button>
+              )}
+              {produtoEditado.length > 0 && (
+                <button
+                  onClick={atualizarProdutoNaoPadrao}
+                  className="button-reset"
+                >
+                  <i
+                    class="bi bi-arrow-right-square"
+                    style={{ fontSize: "24px" }}
+                  ></i>
+                </button>
+              )}
+            </>
+          )}
+          {!showInpuNovoProd && (
+            <>
+              <button
+                onClick={ocultaDesocultarProdutos}
+                className="button-reset"
+              >
+                <i class="bi bi-eye-slash" style={{ fontSize: "24px" }}></i>
+              </button>
+              <button onClick={reset} className="button-reset">
+                <i
+                  class="bi bi-arrow-clockwise"
+                  style={{ fontSize: "24px" }}
+                ></i>
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

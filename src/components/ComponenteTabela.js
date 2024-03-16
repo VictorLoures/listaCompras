@@ -18,10 +18,10 @@ const ComponenteTabela = ({
       <table>
         <thead>
           <tr>
-            <th>Ja pegou?</th>
-            <th>Quantidade</th>
-            <th>Produto</th>
-            <th>Preço</th>
+            <th style={{ width: "90px" }}>Ja pegou?</th>
+            <th style={{ width: "90px" }}>Qtd.</th>
+            <th style={{ width: "165px" }}>Produto</th>
+            <th style={{ width: "50px" }}>Preço</th>
           </tr>
         </thead>
         <tbody>
@@ -36,20 +36,23 @@ const ComponenteTabela = ({
                   onChange={(e) =>
                     onChangeCampo(e.target.checked, prod, "jaPegou")
                   }
+                  disabled={prod.qte == 0}
                 />
               </td>
-              <td>
+              <td className="tdQte">
                 <button
                   onClick={() => onChangeCampo(prod.qte - 1, prod, "qte")}
                   disabled={prod.qte < 1}
+                  className={"button-reset"}
                 >
-                  -
+                  <i class="bi bi-bag-x-fill" style={{ fontSize: "20px" }}></i>
                 </button>
                 <label>{prod.qte}</label>
                 <button
                   onClick={() => onChangeCampo(prod.qte + 1, prod, "qte")}
+                  className={"button-reset"}
                 >
-                  +
+                  <i class="bi bi-bag-plus" style={{ fontSize: "20px" }}></i>
                 </button>
               </td>
               <td style={{ color: prod.qte == 0 ? "#e61919" : "" }}>
@@ -62,6 +65,8 @@ const ComponenteTabela = ({
                   name="preco"
                   value={prod.preco}
                   onChange={(e) => onChangeCampo(e.target.value, prod, "preco")}
+                  disabled={prod.qte == 0}
+                  style={{ width: "70px" }}
                 />
                 {prod.isAdicional && (
                   <>
