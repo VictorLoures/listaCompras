@@ -1,14 +1,14 @@
 {
   "files": {
     "main.css": "/VictorLoures/listaCompras/static/css/main.31d6cfe0.css",
-    "main.js": "/VictorLoures/listaCompras/static/js/main.caf250e7.js",
+    "main.js": "/VictorLoures/listaCompras/static/js/main.2b266f22.js",
     "static/js/453.783087f5.chunk.js": "/VictorLoures/listaCompras/static/js/453.783087f5.chunk.js",
     "index.html": "/VictorLoures/listaCompras/index.html",
-    "main.caf250e7.js.map": "/VictorLoures/listaCompras/static/js/main.caf250e7.js.map",
+    "main.2b266f22.js.map": "/VictorLoures/listaCompras/static/js/main.2b266f22.js.map",
     "453.783087f5.chunk.js.map": "/VictorLoures/listaCompras/static/js/453.783087f5.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.31d6cfe0.css",
-    "static/js/main.caf250e7.js"
+    "static/js/main.2b266f22.js"
   ]
 }
