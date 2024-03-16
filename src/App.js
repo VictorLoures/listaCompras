@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import {
   produtosIniciaisAlimentos,
@@ -20,6 +20,8 @@ function App() {
   const [showInpuNovoProd, setShowInpuNovoProd] = useState(false);
   const [produtoNovo, setProdutoNovo] = useState("");
   const [produtoEditado, setProdutoEditado] = useState("");
+  const [estiloDisplay, setEstiloDisplay] = useState({});
+  const [isOcultar, setIsOcultar] = useState(false);
 
   useEffect(() => {
     const produtosAlimentosLocalStorage = localStorage.getItem(
@@ -40,7 +42,6 @@ function App() {
   }, []);
 
   const atualizarLocalStorage = (produtosAlimentos, produtosLimpeza) => {
-    console.log("fechou");
     localStorage.removeItem(CHAVE_LOCAL_STORAGE_ALIMENTOS);
     localStorage.removeItem(CHAVE_LOCAL_STORAGE_LIMPEZA);
 
@@ -56,6 +57,7 @@ function App() {
 
   const onChangeAlimentos = (valor, produto, idCampo) => {
     let listaProdutos = [...produtosAlimentos];
+    valor = idCampo === "preco" ? formatPreco(valor, idCampo) : valor;
     listaProdutos = atualizarLista(valor, produto, idCampo, listaProdutos);
 
     setProdutosAlimentos(listaProdutos);
@@ -64,10 +66,20 @@ function App() {
 
   const onChangeLimpeza = (valor, produto, idCampo) => {
     let listaProdutos = [...produtosLimpeza];
+    valor = idCampo === "preco" ? formatPreco(valor, idCampo) : valor;
     listaProdutos = atualizarLista(valor, produto, idCampo, listaProdutos);
 
     setProdutosLimpeza(listaProdutos);
     atualizarLocalStorage(produtosAlimentos, listaProdutos);
+  };
+
+  const formatPreco = (preco, idCampo) => {
+    let precoFmt = preco.replace(/\D/g, "");
+    precoFmt = (parseFloat(precoFmt) / 100).toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+    return precoFmt.includes("NaN") ? "R$ 0" : precoFmt;
   };
 
   const atualizarLista = (valor, produto, idCampo, listaProdutos) => {
@@ -131,6 +143,17 @@ function App() {
     atualizarLocalStorage(produtosAlimentos, novaLista);
   };
 
+  const ocultaDesocultarProdutos = () => {
+    setEstiloDisplay(!isOcultar ? { display: "none" } : {});
+    setIsOcultar(!isOcultar);
+  };
+
+  const reset = () => {
+    setProdutosAlimentos(produtosIniciaisAlimentos);
+    setProdutosLimpeza(produtosIniciaisLimpeza);
+    atualizarLocalStorage(produtosIniciaisAlimentos, produtosIniciaisLimpeza);
+  };
+
   return (
     <div>
       <h1>Lista de compras</h1>
@@ -141,6 +164,7 @@ function App() {
           onChange={onChangeAlimentos}
           onClickEditProduto={editarProdutoNaoPadrao}
           onClickRemoverProduto={excluirProdutoNaoPadrao}
+          estiloDisplay={estiloDisplay}
         />
         <ComponenteTabela
           titulo={"Limpeza"}
@@ -148,8 +172,15 @@ function App() {
           onChange={onChangeLimpeza}
           onClickEditProduto={editarProdutoNaoPadrao}
           onClickRemoverProduto={excluirProdutoNaoPadrao}
+          estiloDisplay={estiloDisplay}
         />
         <button onClick={adicionarProduto}>+</button>
+        <button onClick={ocultaDesocultarProdutos}>
+          Ocultar / Descoultar produtos que não precisam{" "}
+        </button>
+        <button onClick={reset}>
+          Voltar aos valores padrão(resetar a lista)
+        </button>
         {showInpuNovoProd && (
           <>
             <input
