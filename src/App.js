@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 import {
   produtosIniciaisAlimentos,
@@ -22,6 +22,8 @@ function App() {
   const [produtoEditado, setProdutoEditado] = useState("");
   const [estiloDisplay, setEstiloDisplay] = useState({});
   const [isOcultar, setIsOcultar] = useState(false);
+
+  const classOcultar = !isOcultar ? "bi bi-eye-slash" : "bi bi-eye";
 
   useEffect(() => {
     const produtosAlimentosLocalStorage = localStorage.getItem(
@@ -114,6 +116,11 @@ function App() {
     atualizarStates(novaLista, setProdutoNovo);
   };
 
+  const cancelarAdicionar = () => {
+    setShowInpuNovoProd(false);
+    setProdutoNovo("");
+  };
+
   const atualizarProdutoNaoPadrao = () => {
     const novaLista = produtosLimpeza.map((it) => {
       if (it.produto === produtoEditado) {
@@ -152,6 +159,8 @@ function App() {
     setProdutosAlimentos(produtosIniciaisAlimentos);
     setProdutosLimpeza(produtosIniciaisLimpeza);
     atualizarLocalStorage(produtosIniciaisAlimentos, produtosIniciaisLimpeza);
+    setEstiloDisplay({});
+    setIsOcultar(true);
   };
 
   return (
@@ -188,17 +197,23 @@ function App() {
                 name="novoProduto"
                 onChange={(e) => setProdutoNovo(e.target.value)}
                 value={produtoNovo}
+                style={{ position: "relative", bottom: "5px" }}
               />
               {produtoEditado.length <= 0 && (
-                <button
-                  onClick={adicionarProdutoNaoPadrao}
-                  className="button-reset"
-                >
-                  <i
-                    class="bi bi-arrow-right-square"
-                    style={{ fontSize: "24px" }}
-                  ></i>
-                </button>
+                <>
+                  <button onClick={cancelarAdicionar} className="button-reset">
+                    <i class="bi bi-x-circle" style={{ fontSize: "24px" }}></i>
+                  </button>
+                  <button
+                    onClick={adicionarProdutoNaoPadrao}
+                    className="button-reset"
+                  >
+                    <i
+                      class="bi bi-arrow-right-square"
+                      style={{ fontSize: "24px" }}
+                    ></i>
+                  </button>
+                </>
               )}
               {produtoEditado.length > 0 && (
                 <button
@@ -219,7 +234,7 @@ function App() {
                 onClick={ocultaDesocultarProdutos}
                 className="button-reset"
               >
-                <i class="bi bi-eye-slash" style={{ fontSize: "24px" }}></i>
+                <i class={classOcultar} style={{ fontSize: "24px" }}></i>
               </button>
               <button onClick={reset} className="button-reset">
                 <i

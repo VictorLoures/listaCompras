@@ -1,5 +1,3 @@
-import { useEffect, useState } from "react";
-
 const ComponenteTabela = ({
   titulo,
   produtos,
@@ -26,7 +24,7 @@ const ComponenteTabela = ({
         </thead>
         <tbody>
           {produtos.map((prod) => (
-            <tr style={prod.qte == 0 ? estiloDisplay : {}}>
+            <tr style={prod.qte === 0 ? estiloDisplay : {}}>
               <td>
                 <input
                   type="checkbox"
@@ -36,7 +34,7 @@ const ComponenteTabela = ({
                   onChange={(e) =>
                     onChangeCampo(e.target.checked, prod, "jaPegou")
                   }
-                  disabled={prod.qte == 0}
+                  disabled={prod.qte === 0}
                 />
               </td>
               <td className="tdQte">
@@ -55,8 +53,24 @@ const ComponenteTabela = ({
                   <i class="bi bi-bag-plus" style={{ fontSize: "20px" }}></i>
                 </button>
               </td>
-              <td style={{ color: prod.qte == 0 ? "#e61919" : "" }}>
+              <td style={{ color: prod.qte === 0 ? "#e61919" : "" }}>
                 {prod.produto}
+                {prod.isAdicional && (
+                  <>
+                    <button
+                      onClick={() => onClickEditProduto(prod.produto)}
+                      className="button-reset"
+                    >
+                      <i class="bi bi-pen" style={{ fontSize: "16px" }}></i>
+                    </button>
+                    <button
+                      onClick={() => onClickRemoverProduto(prod.produto)}
+                      className="button-reset"
+                    >
+                      <i class="bi bi-trash3" style={{ fontSize: "16px" }}></i>
+                    </button>
+                  </>
+                )}
               </td>
               <td>
                 <input
@@ -65,22 +79,30 @@ const ComponenteTabela = ({
                   name="preco"
                   value={prod.preco}
                   onChange={(e) => onChangeCampo(e.target.value, prod, "preco")}
-                  disabled={prod.qte == 0}
+                  disabled={prod.qte === 0}
                   style={{ width: "70px" }}
                 />
-                {prod.isAdicional && (
-                  <>
-                    <button onClick={() => onClickEditProduto(prod.produto)}>
-                      Editar
-                    </button>
-                    <button onClick={() => onClickRemoverProduto(prod.produto)}>
-                      Remover
-                    </button>
-                  </>
-                )}
               </td>
             </tr>
           ))}
+          {estiloDisplay.display !== undefined &&
+            produtos &&
+            produtos.map((it) => it.qte).reduce((qte1, qte2) => qte1 + qte2) ===
+              0 && (
+              <td
+                colSpan="4"
+                style={{
+                  textAlign: "center",
+                  padding: "10px",
+                  fontWeight: "bold",
+                }}
+              >
+                <span style={{ marginRight: "10px" }}>
+                  Você não selecionou nenhum produto!
+                </span>
+                <i class="bi bi-emoji-smile-upside-down"></i>
+              </td>
+            )}
         </tbody>
       </table>
     </div>
