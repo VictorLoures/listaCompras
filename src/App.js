@@ -22,6 +22,7 @@ function App() {
   const [produtoEditado, setProdutoEditado] = useState("");
   const [estiloDisplay, setEstiloDisplay] = useState({});
   const [isOcultar, setIsOcultar] = useState(false);
+  const [msgProdutoExistente, setMsgProdutoExistente] = useState("");
 
   const classOcultar = !isOcultar ? "bi bi-eye-slash" : "bi bi-eye";
 
@@ -37,10 +38,6 @@ function App() {
       setProdutosAlimentos(JSON.parse(produtosAlimentosLocalStorage));
       setProdutosLimpeza(JSON.parse(produtosLimpezaLocalStorage));
     }
-
-    // return () => {
-    //   atualizarLocalStorage();
-    // };
   }, []);
 
   const atualizarLocalStorage = (produtosAlimentos, produtosLimpeza) => {
@@ -68,14 +65,14 @@ function App() {
 
   const onChangeLimpeza = (valor, produto, idCampo) => {
     let listaProdutos = [...produtosLimpeza];
-    valor = idCampo === "preco" ? formatPreco(valor, idCampo) : valor;
+    valor = idCampo === "preco" ? formatPreco(valor) : valor;
     listaProdutos = atualizarLista(valor, produto, idCampo, listaProdutos);
 
     setProdutosLimpeza(listaProdutos);
     atualizarLocalStorage(produtosAlimentos, listaProdutos);
   };
 
-  const formatPreco = (preco, idCampo) => {
+  const formatPreco = (preco) => {
     let precoFmt = preco.replace(/\D/g, "");
     precoFmt = (parseFloat(precoFmt) / 100).toLocaleString("pt-BR", {
       style: "currency",
@@ -119,6 +116,7 @@ function App() {
   const cancelarAdicionar = () => {
     setShowInpuNovoProd(false);
     setProdutoNovo("");
+    setMsgProdutoExistente("");
   };
 
   const atualizarProdutoNaoPadrao = () => {
@@ -148,6 +146,7 @@ function App() {
     const novaLista = produtosLimpeza.filter((it) => it.produto !== produto);
     setProdutosLimpeza(novaLista);
     atualizarLocalStorage(produtosAlimentos, novaLista);
+    setMsgProdutoExistente("");
   };
 
   const ocultaDesocultarProdutos = () => {
@@ -160,8 +159,36 @@ function App() {
     setProdutosLimpeza(produtosIniciaisLimpeza);
     atualizarLocalStorage(produtosIniciaisAlimentos, produtosIniciaisLimpeza);
     setEstiloDisplay({});
-    setIsOcultar(true);
+    setIsOcultar(false);
+    setMsgProdutoExistente("");
   };
+
+  const onChangeProdutoNovo = (e) => {
+    const produto = e.target.value;
+    const listaProdutosGeral = produtosAlimentos
+      .map((it) => ({ ...it, secao: "Alimentos" }))
+      .concat(produtosLimpeza.map((it) => ({ ...it, secao: "Limpeza" })));
+    const produtoExistente = listaProdutosGeral.find((it) => {
+      return (
+        removerAcentos(it.produto).toUpperCase() ===
+        removerAcentos(produto).toUpperCase()
+      );
+    });
+
+    if (produtoExistente) {
+      setMsgProdutoExistente(
+        `O produto ${produto} já existe na lista na seção ${produtoExistente.secao}.`
+      );
+    } else {
+      setMsgProdutoExistente("");
+    }
+
+    setProdutoNovo(produto);
+  };
+
+  function removerAcentos(produto) {
+    return produto.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
 
   return (
     <div>
@@ -183,6 +210,9 @@ function App() {
           onClickRemoverProduto={excluirProdutoNaoPadrao}
           estiloDisplay={estiloDisplay}
         />
+        {msgProdutoExistente.length > 0 && (
+          <div className="produtoJaExiste">{msgProdutoExistente}</div>
+        )}
         <div className="acoes">
           <button onClick={adicionarProduto} className="button-reset">
             <div>
@@ -195,18 +225,27 @@ function App() {
                 type="text"
                 id="novoProduto"
                 name="novoProduto"
-                onChange={(e) => setProdutoNovo(e.target.value)}
+                onChange={onChangeProdutoNovo}
                 value={produtoNovo}
                 style={{ position: "relative", bottom: "5px" }}
               />
               {produtoEditado.length <= 0 && (
                 <>
-                  <button onClick={cancelarAdicionar} className="button-reset">
+                  <button
+                    onClick={cancelarAdicionar}
+                    className="button-reset"
+                    style={{ margin: "3px" }}
+                  >
                     <i class="bi bi-x-circle" style={{ fontSize: "24px" }}></i>
                   </button>
                   <button
                     onClick={adicionarProdutoNaoPadrao}
                     className="button-reset"
+                    style={{
+                      margin: "3px",
+                      padding: "0px",
+                    }}
+                    disabled={msgProdutoExistente.length > 0}
                   >
                     <i
                       class="bi bi-arrow-right-square"
