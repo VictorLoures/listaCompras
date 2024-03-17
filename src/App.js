@@ -216,7 +216,7 @@ function App() {
         <div className="acoes">
           <button onClick={adicionarProduto} className="button-reset">
             <div>
-              <i class="bi bi-plus-square" style={{ fontSize: "24px" }}></i>
+              <i className="bi bi-plus-square" style={{ fontSize: "24px" }}></i>
             </div>
           </button>
           {showInpuNovoProd && (
@@ -228,6 +228,7 @@ function App() {
                 onChange={onChangeProdutoNovo}
                 value={produtoNovo}
                 style={{ position: "relative", bottom: "5px" }}
+                autocomplete="off"
               />
               {produtoEditado.length <= 0 && (
                 <>
@@ -236,7 +237,10 @@ function App() {
                     className="button-reset"
                     style={{ margin: "3px" }}
                   >
-                    <i class="bi bi-x-circle" style={{ fontSize: "24px" }}></i>
+                    <i
+                      className="bi bi-x-circle"
+                      style={{ fontSize: "24px" }}
+                    ></i>
                   </button>
                   <button
                     onClick={adicionarProdutoNaoPadrao}
@@ -248,7 +252,7 @@ function App() {
                     disabled={msgProdutoExistente.length > 0}
                   >
                     <i
-                      class="bi bi-arrow-right-square"
+                      className="bi bi-arrow-right-square"
                       style={{ fontSize: "24px" }}
                     ></i>
                   </button>
@@ -260,7 +264,7 @@ function App() {
                   className="button-reset"
                 >
                   <i
-                    class="bi bi-arrow-right-square"
+                    className="bi bi-arrow-right-square"
                     style={{ fontSize: "24px" }}
                   ></i>
                 </button>
@@ -273,11 +277,11 @@ function App() {
                 onClick={ocultaDesocultarProdutos}
                 className="button-reset"
               >
-                <i class={classOcultar} style={{ fontSize: "24px" }}></i>
+                <i className={classOcultar} style={{ fontSize: "24px" }}></i>
               </button>
               <button onClick={reset} className="button-reset">
                 <i
-                  class="bi bi-arrow-clockwise"
+                  className="bi bi-arrow-clockwise"
                   style={{ fontSize: "24px" }}
                 ></i>
               </button>

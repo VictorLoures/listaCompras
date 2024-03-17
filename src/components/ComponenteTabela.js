@@ -24,7 +24,7 @@ const ComponenteTabela = ({
         </thead>
         <tbody>
           {produtos.map((prod) => (
-            <tr style={prod.qte === 0 ? estiloDisplay : {}}>
+            <tr style={prod.qte === 0 ? estiloDisplay : {}} key={prod.produto}>
               <td>
                 <input
                   type="checkbox"
@@ -43,14 +43,20 @@ const ComponenteTabela = ({
                   disabled={prod.qte < 1}
                   className={"button-reset"}
                 >
-                  <i class="bi bi-bag-x-fill" style={{ fontSize: "20px" }}></i>
+                  <i
+                    className="bi bi-bag-x-fill"
+                    style={{ fontSize: "20px" }}
+                  ></i>
                 </button>
                 <label>{prod.qte}</label>
                 <button
                   onClick={() => onChangeCampo(prod.qte + 1, prod, "qte")}
                   className={"button-reset"}
                 >
-                  <i class="bi bi-bag-plus" style={{ fontSize: "20px" }}></i>
+                  <i
+                    className="bi bi-bag-plus"
+                    style={{ fontSize: "20px" }}
+                  ></i>
                 </button>
               </td>
               <td style={{ color: prod.qte === 0 ? "#e61919" : "" }}>
@@ -61,13 +67,16 @@ const ComponenteTabela = ({
                       onClick={() => onClickEditProduto(prod.produto)}
                       className="button-reset"
                     >
-                      <i class="bi bi-pen" style={{ fontSize: "16px" }}></i>
+                      <i className="bi bi-pen" style={{ fontSize: "16px" }}></i>
                     </button>
                     <button
                       onClick={() => onClickRemoverProduto(prod.produto)}
                       className="button-reset"
                     >
-                      <i class="bi bi-trash3" style={{ fontSize: "16px" }}></i>
+                      <i
+                        className="bi bi-trash3"
+                        style={{ fontSize: "16px" }}
+                      ></i>
                     </button>
                   </>
                 )}
@@ -100,7 +109,7 @@ const ComponenteTabela = ({
                 <span style={{ marginRight: "10px" }}>
                   Você não selecionou nenhum produto!
                 </span>
-                <i class="bi bi-emoji-smile-upside-down"></i>
+                <i className="bi bi-emoji-smile-upside-down"></i>
               </td>
             )}
         </tbody>
