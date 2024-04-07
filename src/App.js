@@ -1,20 +1,22 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import {
+  sortArray,
   produtosIniciaisAlimentos,
   produtosIniciaisLimpeza,
 } from "./utils/ProdutosIniciais";
 import ComponenteTabela from "./components/ComponenteTabela";
+import { Button, Modal } from "react-bootstrap";
 
 const CHAVE_LOCAL_STORAGE_ALIMENTOS = "produtosAlimentosLocalStorage";
 const CHAVE_LOCAL_STORAGE_LIMPEZA = "produtosLimpezaLocalStorage";
 
 function App() {
   const [produtosAlimentos, setProdutosAlimentos] = useState(
-    produtosIniciaisAlimentos
+    sortArray(produtosIniciaisAlimentos)
   );
   const [produtosLimpeza, setProdutosLimpeza] = useState(
-    produtosIniciaisLimpeza
+    sortArray(produtosIniciaisLimpeza)
   );
 
   const [showInpuNovoProd, setShowInpuNovoProd] = useState(false);
@@ -23,6 +25,7 @@ function App() {
   const [estiloDisplay, setEstiloDisplay] = useState({});
   const [isOcultar, setIsOcultar] = useState(false);
   const [msgProdutoExistente, setMsgProdutoExistente] = useState("");
+  const [modalIsOpen, setModalIsOpen] = useState(false);
 
   const classOcultar = !isOcultar ? "bi bi-eye-slash" : "bi bi-eye";
 
@@ -78,7 +81,7 @@ function App() {
       style: "currency",
       currency: "BRL",
     });
-    return precoFmt.includes("NaN") ? "R$ 0" : precoFmt;
+    return precoFmt.includes("NaN") ? "R$ 0,00" : precoFmt;
   };
 
   const atualizarLista = (valor, produto, idCampo, listaProdutos) => {
@@ -103,7 +106,7 @@ function App() {
   const adicionarProdutoNaoPadrao = () => {
     const newProduto = {
       jaPegou: false,
-      qte: 0,
+      qte: 1,
       produto: produtoNovo,
       preco: "R$ 0,00",
       isAdicional: true,
@@ -161,6 +164,7 @@ function App() {
     setEstiloDisplay({});
     setIsOcultar(false);
     setMsgProdutoExistente("");
+    setModalIsOpen(false);
   };
 
   const onChangeProdutoNovo = (e) => {
@@ -189,6 +193,27 @@ function App() {
   function removerAcentos(produto) {
     return produto.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   }
+
+  const modal = (
+    <div>
+      <Modal show={modalIsOpen} onHide={() => setModalIsOpen(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Resetar produtos</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          Tem certeza que deseja resetar todos os produtos?
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setModalIsOpen(false)}>
+            Cancelar
+          </Button>
+          <Button variant="primary" onClick={reset}>
+            Resetar
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    </div>
+  );
 
   return (
     <div>
@@ -271,6 +296,7 @@ function App() {
               )}
             </>
           )}
+          {modal}
           {!showInpuNovoProd && (
             <>
               <button
@@ -279,7 +305,10 @@ function App() {
               >
                 <i className={classOcultar} style={{ fontSize: "24px" }}></i>
               </button>
-              <button onClick={reset} className="button-reset">
+              <button
+                onClick={() => setModalIsOpen(true)}
+                className="button-reset"
+              >
                 <i
                   className="bi bi-arrow-clockwise"
                   style={{ fontSize: "24px" }}

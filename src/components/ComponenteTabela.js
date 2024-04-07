@@ -10,6 +10,11 @@ const ComponenteTabela = ({
     onChange(valor, produto, idCampo);
   };
 
+  const setCursosrFinal = (id) => {
+    let input = document.getElementById(id);
+    input.setSelectionRange(input.value.length, input.value.length);
+  };
+
   return (
     <div>
       <h2>{titulo}</h2>
@@ -59,7 +64,12 @@ const ComponenteTabela = ({
                   ></i>
                 </button>
               </td>
-              <td style={{ color: prod.qte === 0 ? "#e61919" : "" }}>
+              <td
+                style={{
+                  color:
+                    prod.qte === 0 ? "#e61919" : !prod.jaPegou ? "orange" : "",
+                }}
+              >
                 {prod.produto}
                 {prod.isAdicional && (
                   <>
@@ -84,12 +94,13 @@ const ComponenteTabela = ({
               <td>
                 <input
                   type="tel"
-                  id="preco"
+                  id={`preco-${prod.produto}`}
                   name="preco"
                   value={prod.preco}
                   onChange={(e) => onChangeCampo(e.target.value, prod, "preco")}
                   disabled={prod.qte === 0}
                   style={{ width: "70px" }}
+                  onClick={() => setCursosrFinal(`preco-${prod.produto}`)}
                 />
               </td>
             </tr>
