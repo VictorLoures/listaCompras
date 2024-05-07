@@ -46,6 +46,7 @@ export const produtosIniciaisAlimentos = [
   { jaPegou: false, qte: 0, produto: "Oleo", preco: "R$ 0,00" },
   { jaPegou: false, qte: 0, produto: "Azeite", preco: "R$ 0,00" },
   { jaPegou: false, qte: 0, produto: "Extrato de tomate", preco: "R$ 0,00" },
+  { jaPegou: false, qte: 0, produto: "Molho de tomate", preco: "R$ 0,00" },
   { jaPegou: false, qte: 0, produto: "Atum", preco: "R$ 0,00" },
   { jaPegou: false, qte: 0, produto: "Ervilha", preco: "R$ 0,00" },
   { jaPegou: false, qte: 0, produto: "Milho verde", preco: "R$ 0,00" },
