@@ -2,14 +2,7 @@ export const sortArray = (array) => {
   return array.sort((a, b) => {
     const produtoA = a.produto.toLowerCase();
     const produtoB = b.produto.toLowerCase();
-
-    if (produtoA < produtoB) {
-      return -1;
-    }
-    if (produtoA > produtoB) {
-      return 1;
-    }
-    return 0;
+    return produtoA.localeCompare(produtoB, "pt-BR");
   });
 };
 
