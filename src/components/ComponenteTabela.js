@@ -18,7 +18,7 @@ const ComponenteTabela = ({
     input.setSelectionRange(input.value.length, input.value.length);
   };
 
-  const teste = (prod) => {
+  const setStyle = (prod) => {
     let result = {};
     if (prod.qte === 0) {
       result = estiloDisplay;
@@ -46,11 +46,7 @@ const ComponenteTabela = ({
         </thead>
         <tbody>
           {produtos.map((prod) => (
-            <tr
-              style={teste(prod)}
-              key={prod.produto}
-              onClick={() => ativarEdicaoItem(prod)}
-            >
+            <tr style={setStyle(prod)} key={prod.produto}>
               <td>
                 <input
                   type="checkbox"
@@ -76,6 +72,7 @@ const ComponenteTabela = ({
               <td
                 className="tdQte"
                 style={{ display: "flex", justifyContent: "center" }}
+                onClick={() => ativarEdicaoItem(prod)}
               >
                 <label>{prod.qte}</label>
               </td>
@@ -89,7 +86,12 @@ const ComponenteTabela = ({
                       : "",
                 }}
               >
-                <span style={{ fontSize: "24px" }}>{prod.produto}</span>
+                <span
+                  style={{ fontSize: "24px", display: "block", width: "100%" }}
+                  onClick={() => ativarEdicaoItem(prod)}
+                >
+                  {prod.produto}
+                </span>
                 {prod.isAdicional && (
                   <>
                     <button
@@ -110,25 +112,27 @@ const ComponenteTabela = ({
                   </>
                 )}
               </td>
-              <td>
-                {prod.selected && (
-                  <input
-                    type="tel"
-                    id={`preco-${prod.produto}`}
-                    name="preco"
-                    value={prod.preco}
-                    onChange={(e) =>
-                      onChangeCampo(e.target.value, prod, "preco")
-                    }
-                    disabled={prod.qte === 0}
-                    style={{ width: "70px" }}
-                    onClick={() => setCursosrFinal(`preco-${prod.produto}`)}
-                    onBlur={() => calcularTotal()}
-                  />
-                )}
-                {!prod.selected && (
-                  <p style={{ width: "70px" }}>{prod.preco}</p>
-                )}
+              <td onClick={() => ativarEdicaoItem(prod)}>
+                <div>
+                  {prod.selected && (
+                    <input
+                      type="tel"
+                      id={`preco-${prod.produto}`}
+                      name="preco"
+                      value={prod.preco}
+                      onChange={(e) =>
+                        onChangeCampo(e.target.value, prod, "preco")
+                      }
+                      disabled={prod.qte === 0}
+                      style={{ width: "70px" }}
+                      onClick={() => setCursosrFinal(`preco-${prod.produto}`)}
+                      onBlur={() => calcularTotal()}
+                    />
+                  )}
+                  {!prod.selected && (
+                    <p style={{ width: "70px" }}>{prod.preco}</p>
+                  )}
+                </div>
               </td>
             </tr>
           ))}

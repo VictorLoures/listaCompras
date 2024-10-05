@@ -53,7 +53,7 @@ function App() {
     }
     const ocultar = JSON.parse(localStorage.getItem("ocultar"));
     ocultaDesocultarProdutos(ocultar);
-    setIsOcultar(!ocultar);
+    setIsOcultar(ocultar);
     calcularTotal(
       JSON.parse(produtosAlimentosLocalStorage),
       JSON.parse(produtosLimpezaLocalStorage)
@@ -193,8 +193,8 @@ function App() {
 
   const ocultaDesocultarProdutos = (ocultar) => {
     setEstiloDisplay(ocultar ? { display: "none" } : {});
-    localStorage.setItem("ocultar", JSON.stringify(!ocultar));
-    setIsOcultar(!ocultar);
+    localStorage.setItem("ocultar", JSON.stringify(ocultar));
+    setIsOcultar(ocultar);
   };
 
   const reset = () => {
@@ -454,7 +454,7 @@ function App() {
           {!showInpuNovoProd && (
             <>
               <button
-                onClick={() => ocultaDesocultarProdutos(isOcultar)}
+                onClick={() => ocultaDesocultarProdutos(!isOcultar)}
                 className="button-reset"
               >
                 <i className={classOcultar} style={{ fontSize: "24px" }}></i>
