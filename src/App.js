@@ -1,12 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import {
   sortArray,
   produtosIniciaisAlimentos,
   produtosIniciaisLimpeza,
 } from "./utils/ProdutosIniciais";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import ComponenteTabela from "./components/ComponenteTabela";
 import { Button, Modal } from "react-bootstrap";
+import { toast } from "react-toastify";
 
 const CHAVE_LOCAL_STORAGE_ALIMENTOS = "produtosAlimentosLocalStorage";
 const CHAVE_LOCAL_STORAGE_LIMPEZA = "produtosLimpezaLocalStorage";
@@ -26,6 +29,13 @@ function App() {
   const [isOcultar, setIsOcultar] = useState(false);
   const [msgProdutoExistente, setMsgProdutoExistente] = useState("");
   const [modalIsOpen, setModalIsOpen] = useState(false);
+  const [totalPagarM1, setTotalPagarM1] = useState(0);
+  const [totalPagarM2, setTotalPagarM2] = useState(0);
+  const [totalPagar, setTotalPagar] = useState(0);
+
+  const [estilo, setEstilo] = useState({});
+
+  const produtoExcluindo = useRef();
 
   const classOcultar = !isOcultar ? "bi bi-eye-slash" : "bi bi-eye";
 
@@ -41,6 +51,13 @@ function App() {
       setProdutosAlimentos(JSON.parse(produtosAlimentosLocalStorage));
       setProdutosLimpeza(JSON.parse(produtosLimpezaLocalStorage));
     }
+    const ocultar = JSON.parse(localStorage.getItem("ocultar"));
+    ocultaDesocultarProdutos(ocultar);
+    setIsOcultar(!ocultar);
+    calcularTotal(
+      JSON.parse(produtosAlimentosLocalStorage),
+      JSON.parse(produtosLimpezaLocalStorage)
+    );
   }, []);
 
   const atualizarLocalStorage = (produtosAlimentos, produtosLimpeza) => {
@@ -58,21 +75,38 @@ function App() {
   };
 
   const onChangeAlimentos = (valor, produto, idCampo) => {
+    alterarCheckMercados(valor, produto, idCampo);
     let listaProdutos = [...produtosAlimentos];
     valor = idCampo === "preco" ? formatPreco(valor, idCampo) : valor;
     listaProdutos = atualizarLista(valor, produto, idCampo, listaProdutos);
 
     setProdutosAlimentos(listaProdutos);
     atualizarLocalStorage(listaProdutos, produtosLimpeza);
+    if (idCampo === "m1" || idCampo === "m2") {
+      calcularTotal(listaProdutos, produtosLimpeza);
+    }
   };
 
   const onChangeLimpeza = (valor, produto, idCampo) => {
+    alterarCheckMercados(valor, produto, idCampo);
     let listaProdutos = [...produtosLimpeza];
     valor = idCampo === "preco" ? formatPreco(valor) : valor;
     listaProdutos = atualizarLista(valor, produto, idCampo, listaProdutos);
 
     setProdutosLimpeza(listaProdutos);
     atualizarLocalStorage(produtosAlimentos, listaProdutos);
+    if (idCampo === "m1" || idCampo === "m2") {
+      calcularTotal(produtosAlimentos, listaProdutos);
+    }
+  };
+
+  const alterarCheckMercados = (valor, produto, idCampo) => {
+    if (idCampo === "m1" && valor) {
+      produto.m2 = false;
+    }
+    if (idCampo === "m2" && valor) {
+      produto.m1 = false;
+    }
   };
 
   const formatPreco = (preco) => {
@@ -105,15 +139,19 @@ function App() {
 
   const adicionarProdutoNaoPadrao = () => {
     const newProduto = {
-      jaPegou: false,
+      m1: false,
+      m2: false,
       qte: 1,
       produto: produtoNovo,
       preco: "R$ 0,00",
       isAdicional: true,
+      selected: true,
     };
     const novaLista = produtosLimpeza;
     novaLista.push(newProduto);
+    toast.success("Produto incluido com sucesso");
     atualizarStates(novaLista, setProdutoNovo);
+    ativarEdicaoItem(newProduto);
   };
 
   const cancelarAdicionar = () => {
@@ -150,11 +188,13 @@ function App() {
     setProdutosLimpeza(novaLista);
     atualizarLocalStorage(produtosAlimentos, novaLista);
     setMsgProdutoExistente("");
+    produtoExcluindo.current = produto;
   };
 
-  const ocultaDesocultarProdutos = () => {
-    setEstiloDisplay(!isOcultar ? { display: "none" } : {});
-    setIsOcultar(!isOcultar);
+  const ocultaDesocultarProdutos = (ocultar) => {
+    setEstiloDisplay(ocultar ? { display: "none" } : {});
+    localStorage.setItem("ocultar", JSON.stringify(!ocultar));
+    setIsOcultar(!ocultar);
   };
 
   const reset = () => {
@@ -162,9 +202,11 @@ function App() {
     setProdutosLimpeza(produtosIniciaisLimpeza);
     atualizarLocalStorage(produtosIniciaisAlimentos, produtosIniciaisLimpeza);
     setEstiloDisplay({});
-    setIsOcultar(false);
+    ocultaDesocultarProdutos(false);
     setMsgProdutoExistente("");
     setModalIsOpen(false);
+    calcularTotal(produtosIniciaisAlimentos, produtosIniciaisLimpeza);
+    toast.success("Lista resetada com sucesso!");
   };
 
   const onChangeProdutoNovo = (e) => {
@@ -215,8 +257,114 @@ function App() {
     </div>
   );
 
+  const ativarEdicaoItem = (produto) => {
+    if (
+      produtosAlimentos &&
+      produtosLimpeza &&
+      produto &&
+      produtoExcluindo.current !== produto.produto
+    ) {
+      const listaZeradaAlimentos = produtosAlimentos.map((it) => {
+        it.selected = it === produto;
+        return it;
+      });
+
+      const listaZeradaLimpeza = produtosLimpeza.map((it) => {
+        it.selected = it === produto;
+        return it;
+      });
+
+      changeEstilo(produto);
+
+      setProdutosAlimentos(listaZeradaAlimentos);
+      setProdutosLimpeza(listaZeradaLimpeza);
+      atualizarLocalStorage(listaZeradaAlimentos, listaZeradaLimpeza);
+
+      setTimeout(() => {
+        const campo = document.getElementById(`preco-${produto.produto}`);
+        campo.focus();
+      }, 200);
+    } else {
+      setEstilo({});
+      produtoExcluindo.current = false;
+    }
+  };
+
+  const changeEstilo = (produto) => {
+    let result = {};
+    if (produto.selected) {
+      result = { backgroundColor: "#f0f0f0" };
+    }
+    setEstilo(result);
+  };
+
+  const adicionarDiminuirQte = (adicionar) => {
+    const produtoAtivo = produtosAlimentos
+      .concat(produtosLimpeza)
+      .find((it) => it.selected);
+
+    if (produtoAtivo) {
+      const isAlimento = produtosAlimentos.includes(produtoAtivo);
+
+      const qte = adicionar
+        ? produtoAtivo.qte + 1
+        : produtoAtivo.qte === 0
+        ? 0
+        : produtoAtivo.qte - 1;
+      if (isAlimento) {
+        onChangeAlimentos(qte, produtoAtivo, "qte");
+      } else {
+        onChangeLimpeza(qte, produtoAtivo, "qte");
+      }
+    } else {
+      toast.warn("Selecione um produto!");
+    }
+  };
+
+  const calcularTotal = (
+    produtosAlimen = produtosAlimentos,
+    produtosLimp = produtosLimpeza
+  ) => {
+    const fmtValor = (valor) => {
+      return valor.toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+      });
+    };
+
+    const extractValor = (valor) => {
+      return Number(valor.substring(3).replace(",", "."));
+    };
+
+    const todosProdutos = produtosAlimen.concat(produtosLimp);
+
+    const pordutosJaPegosM1 = todosProdutos.filter((it) => it.m1);
+    const pordutosJaPegosM2 = todosProdutos.filter((it) => it.m2);
+
+    let totalM1 = 0;
+    if (pordutosJaPegosM1 && pordutosJaPegosM1.length > 0) {
+      const valores = pordutosJaPegosM1.map((it) => extractValor(it.preco));
+      totalM1 = valores.reduce((preco1, preco2) => preco1 + preco2);
+      setTotalPagarM1(fmtValor(totalM1));
+    } else {
+      setTotalPagarM1(fmtValor(0));
+    }
+
+    let totalM2 = 0;
+    if (pordutosJaPegosM2 && pordutosJaPegosM2.length > 0) {
+      const valores = pordutosJaPegosM2.map((it) => extractValor(it.preco));
+      totalM2 = valores.reduce((preco1, preco2) => preco1 + preco2);
+      setTotalPagarM2(fmtValor(totalM2));
+    } else {
+      setTotalPagarM2(fmtValor(0));
+    }
+
+    setTotalPagar(fmtValor(totalM1 + totalM2));
+  };
+
   return (
     <div>
+      <ToastContainer autoClose={3000} />
       <h1>Lista de compras</h1>
       <div className="container">
         <ComponenteTabela
@@ -226,6 +374,9 @@ function App() {
           onClickEditProduto={editarProdutoNaoPadrao}
           onClickRemoverProduto={excluirProdutoNaoPadrao}
           estiloDisplay={estiloDisplay}
+          ativarEdicaoItem={ativarEdicaoItem}
+          estilo={estilo}
+          calcularTotal={calcularTotal}
         />
         <ComponenteTabela
           titulo={"Limpeza"}
@@ -234,6 +385,9 @@ function App() {
           onClickEditProduto={editarProdutoNaoPadrao}
           onClickRemoverProduto={excluirProdutoNaoPadrao}
           estiloDisplay={estiloDisplay}
+          ativarEdicaoItem={ativarEdicaoItem}
+          estilo={estilo}
+          calcularTotal={calcularTotal}
         />
         {msgProdutoExistente.length > 0 && (
           <div className="produtoJaExiste">{msgProdutoExistente}</div>
@@ -300,7 +454,7 @@ function App() {
           {!showInpuNovoProd && (
             <>
               <button
-                onClick={ocultaDesocultarProdutos}
+                onClick={() => ocultaDesocultarProdutos(isOcultar)}
                 className="button-reset"
               >
                 <i className={classOcultar} style={{ fontSize: "24px" }}></i>
@@ -316,6 +470,41 @@ function App() {
               </button>
             </>
           )}
+          <div
+            style={{
+              position: "fixed",
+              bottom: "0",
+              left: "0",
+              width: "100%",
+              height: "100px",
+              backgroundColor: "#333",
+              textAlign: "center",
+              color: "white",
+            }}
+          >
+            <button
+              onClick={() => adicionarDiminuirQte(false)}
+              className={"button-reset"}
+              style={{ color: "white" }}
+            >
+              <i className="bi bi-bag-x-fill" style={{ fontSize: "20px" }}></i>
+            </button>
+            <button
+              onClick={() => adicionarDiminuirQte(true)}
+              className={"button-reset"}
+              style={{ color: "white" }}
+            >
+              <i
+                className="bi bi-bag-plus-fill"
+                style={{ fontSize: "20px" }}
+              ></i>
+            </button>
+            <div>
+              <span>M1: {totalPagarM1} / </span>
+              <span>M2: {totalPagarM2} / </span>
+              <span> M1 + M2: {totalPagar}</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -5,6 +5,9 @@ const ComponenteTabela = ({
   onClickEditProduto,
   onClickRemoverProduto,
   estiloDisplay,
+  ativarEdicaoItem,
+  estilo,
+  calcularTotal,
 }) => {
   const onChangeCampo = (valor, produto, idCampo) => {
     onChange(valor, produto, idCampo);
@@ -15,62 +18,78 @@ const ComponenteTabela = ({
     input.setSelectionRange(input.value.length, input.value.length);
   };
 
+  const teste = (prod) => {
+    let result = {};
+    if (prod.qte === 0) {
+      result = estiloDisplay;
+      if (prod.selected) {
+        result = { ...result, ...estilo };
+      }
+    } else if (prod.selected) {
+      result = estilo;
+    }
+    return result;
+  };
+
   return (
     <div>
       <h2>{titulo}</h2>
       <table>
         <thead>
           <tr>
-            <th style={{ width: "90px" }}>Ja pegou?</th>
-            <th style={{ width: "90px" }}>Qtd.</th>
-            <th style={{ width: "165px" }}>Produto</th>
+            <th style={{ width: "45px" }}>M1</th>
+            <th style={{ width: "45px" }}>M2</th>
+            <th style={{ width: "5px" }}>Qtd.</th>
+            <th style={{ width: "250px" }}>Produto</th>
             <th style={{ width: "50px" }}>Preço</th>
           </tr>
         </thead>
         <tbody>
           {produtos.map((prod) => (
-            <tr style={prod.qte === 0 ? estiloDisplay : {}} key={prod.produto}>
+            <tr
+              style={teste(prod)}
+              key={prod.produto}
+              onClick={() => ativarEdicaoItem(prod)}
+            >
               <td>
                 <input
                   type="checkbox"
-                  id="jaPegou"
-                  name="jaPegou"
-                  checked={prod.jaPegou}
-                  onChange={(e) =>
-                    onChangeCampo(e.target.checked, prod, "jaPegou")
-                  }
+                  id="m1"
+                  name="m1"
+                  checked={prod.m1}
+                  onChange={(e) => onChangeCampo(e.target.checked, prod, "m1")}
                   disabled={prod.qte === 0}
+                  style={{ transform: "scale(1.5)" }}
                 />
               </td>
-              <td className="tdQte">
-                <button
-                  onClick={() => onChangeCampo(prod.qte - 1, prod, "qte")}
-                  disabled={prod.qte < 1}
-                  className={"button-reset"}
-                >
-                  <i
-                    className="bi bi-bag-x-fill"
-                    style={{ fontSize: "20px" }}
-                  ></i>
-                </button>
+              <td>
+                <input
+                  type="checkbox"
+                  id="m2"
+                  name="m2"
+                  checked={prod.m2}
+                  onChange={(e) => onChangeCampo(e.target.checked, prod, "m2")}
+                  disabled={prod.qte === 0}
+                  style={{ transform: "scale(1.5)" }}
+                />
+              </td>
+              <td
+                className="tdQte"
+                style={{ display: "flex", justifyContent: "center" }}
+              >
                 <label>{prod.qte}</label>
-                <button
-                  onClick={() => onChangeCampo(prod.qte + 1, prod, "qte")}
-                  className={"button-reset"}
-                >
-                  <i
-                    className="bi bi-bag-plus"
-                    style={{ fontSize: "20px" }}
-                  ></i>
-                </button>
               </td>
               <td
                 style={{
                   color:
-                    prod.qte === 0 ? "#e61919" : !prod.jaPegou ? "orange" : "",
+                    prod.qte === 0
+                      ? "#e61919"
+                      : !prod.m1 && !prod.m2
+                      ? "orange"
+                      : "",
                 }}
               >
-                {prod.produto}
+                <span style={{ fontSize: "24px" }}>{prod.produto}</span>
                 {prod.isAdicional && (
                   <>
                     <button
@@ -92,16 +111,24 @@ const ComponenteTabela = ({
                 )}
               </td>
               <td>
-                <input
-                  type="tel"
-                  id={`preco-${prod.produto}`}
-                  name="preco"
-                  value={prod.preco}
-                  onChange={(e) => onChangeCampo(e.target.value, prod, "preco")}
-                  disabled={prod.qte === 0}
-                  style={{ width: "70px" }}
-                  onClick={() => setCursosrFinal(`preco-${prod.produto}`)}
-                />
+                {prod.selected && (
+                  <input
+                    type="tel"
+                    id={`preco-${prod.produto}`}
+                    name="preco"
+                    value={prod.preco}
+                    onChange={(e) =>
+                      onChangeCampo(e.target.value, prod, "preco")
+                    }
+                    disabled={prod.qte === 0}
+                    style={{ width: "70px" }}
+                    onClick={() => setCursosrFinal(`preco-${prod.produto}`)}
+                    onBlur={() => calcularTotal()}
+                  />
+                )}
+                {!prod.selected && (
+                  <p style={{ width: "70px" }}>{prod.preco}</p>
+                )}
               </td>
             </tr>
           ))}
