@@ -74,7 +74,7 @@ function App() {
     );
   };
 
-  const onChangeAlimentos = (valor, produto, idCampo) => {
+  const onChangeAlimentos = (valor, produto, idCampo, recalcular = false) => {
     alterarCheckMercados(valor, produto, idCampo);
     let listaProdutos = [...produtosAlimentos];
     valor = idCampo === "preco" ? formatPreco(valor, idCampo) : valor;
@@ -82,12 +82,12 @@ function App() {
 
     setProdutosAlimentos(listaProdutos);
     atualizarLocalStorage(listaProdutos, produtosLimpeza);
-    if (idCampo === "m1" || idCampo === "m2") {
+    if (idCampo === "m1" || idCampo === "m2" || recalcular) {
       calcularTotal(listaProdutos, produtosLimpeza);
     }
   };
 
-  const onChangeLimpeza = (valor, produto, idCampo) => {
+  const onChangeLimpeza = (valor, produto, idCampo, recalcular = false) => {
     alterarCheckMercados(valor, produto, idCampo);
     let listaProdutos = [...produtosLimpeza];
     valor = idCampo === "preco" ? formatPreco(valor) : valor;
@@ -95,7 +95,7 @@ function App() {
 
     setProdutosLimpeza(listaProdutos);
     atualizarLocalStorage(produtosAlimentos, listaProdutos);
-    if (idCampo === "m1" || idCampo === "m2") {
+    if (idCampo === "m1" || idCampo === "m2" || recalcular) {
       calcularTotal(produtosAlimentos, listaProdutos);
     }
   };
@@ -312,9 +312,9 @@ function App() {
         ? 0
         : produtoAtivo.qte - 1;
       if (isAlimento) {
-        onChangeAlimentos(qte, produtoAtivo, "qte");
+        onChangeAlimentos(qte, produtoAtivo, "qte", true);
       } else {
-        onChangeLimpeza(qte, produtoAtivo, "qte");
+        onChangeLimpeza(qte, produtoAtivo, "qte", true);
       }
     } else {
       toast.warn("Selecione um produto!");
@@ -332,34 +332,31 @@ function App() {
       });
     };
 
-    const extractValor = (valor) => {
-      return Number(valor.substring(3).replace(",", "."));
-    };
-
     const todosProdutos = produtosAlimen.concat(produtosLimp);
 
     const pordutosJaPegosM1 = todosProdutos.filter((it) => it.m1);
     const pordutosJaPegosM2 = todosProdutos.filter((it) => it.m2);
 
-    let totalM1 = 0;
-    if (pordutosJaPegosM1 && pordutosJaPegosM1.length > 0) {
-      const valores = pordutosJaPegosM1.map((it) => extractValor(it.preco));
-      totalM1 = valores.reduce((preco1, preco2) => preco1 + preco2);
-      setTotalPagarM1(fmtValor(totalM1));
-    } else {
-      setTotalPagarM1(fmtValor(0));
-    }
-
-    let totalM2 = 0;
-    if (pordutosJaPegosM2 && pordutosJaPegosM2.length > 0) {
-      const valores = pordutosJaPegosM2.map((it) => extractValor(it.preco));
-      totalM2 = valores.reduce((preco1, preco2) => preco1 + preco2);
-      setTotalPagarM2(fmtValor(totalM2));
-    } else {
-      setTotalPagarM2(fmtValor(0));
-    }
+    let totalM1 = atualizarTotal(pordutosJaPegosM1, setTotalPagarM1, fmtValor);
+    let totalM2 = atualizarTotal(pordutosJaPegosM2, setTotalPagarM2, fmtValor);
 
     setTotalPagar(fmtValor(totalM1 + totalM2));
+  };
+
+  const atualizarTotal = (produtos, setValor, fmtValor) => {
+    const extractValor = (valor) => {
+      return Number(valor.substring(3).replace(",", "."));
+    };
+
+    let total = 0;
+    if (produtos && produtos.length > 0) {
+      const valores = produtos.map((it) => extractValor(it.preco) * it.qte);
+      total = valores.reduce((preco1, preco2) => preco1 + preco2);
+      setValor(fmtValor(total));
+    } else {
+      setValor(fmtValor(0));
+    }
+    return total;
   };
 
   return (
