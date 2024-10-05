@@ -147,11 +147,11 @@ function App() {
       isAdicional: true,
       selected: true,
     };
-    const novaLista = produtosLimpeza;
+    const novaLista = produtosLimpeza.map((it) => it);
     novaLista.push(newProduto);
     toast.success("Produto incluido com sucesso");
     atualizarStates(novaLista, setProdutoNovo);
-    ativarEdicaoItem(newProduto);
+    ativarEdicaoItem(newProduto, novaLista);
   };
 
   const cancelarAdicionar = () => {
@@ -189,6 +189,7 @@ function App() {
     atualizarLocalStorage(produtosAlimentos, novaLista);
     setMsgProdutoExistente("");
     produtoExcluindo.current = produto;
+    calcularTotal(produtosAlimentos, novaLista);
   };
 
   const ocultaDesocultarProdutos = (ocultar) => {
@@ -206,6 +207,7 @@ function App() {
     setMsgProdutoExistente("");
     setModalIsOpen(false);
     calcularTotal(produtosIniciaisAlimentos, produtosIniciaisLimpeza);
+    produtoExcluindo.current = null;
     toast.success("Lista resetada com sucesso!");
   };
 
@@ -257,10 +259,10 @@ function App() {
     </div>
   );
 
-  const ativarEdicaoItem = (produto) => {
+  const ativarEdicaoItem = (produto, listaLimpeza = produtosLimpeza) => {
     if (
       produtosAlimentos &&
-      produtosLimpeza &&
+      listaLimpeza &&
       produto &&
       produtoExcluindo.current !== produto.produto
     ) {
@@ -269,7 +271,7 @@ function App() {
         return it;
       });
 
-      const listaZeradaLimpeza = produtosLimpeza.map((it) => {
+      const listaZeradaLimpeza = listaLimpeza.map((it) => {
         it.selected = it === produto;
         return it;
       });
@@ -282,7 +284,9 @@ function App() {
 
       setTimeout(() => {
         const campo = document.getElementById(`preco-${produto.produto}`);
-        campo.focus();
+        if (campo) {
+          campo.focus();
+        }
       }, 200);
     } else {
       setEstilo({});
@@ -390,11 +394,6 @@ function App() {
           <div className="produtoJaExiste">{msgProdutoExistente}</div>
         )}
         <div className="acoes">
-          <button onClick={adicionarProduto} className="button-reset">
-            <div>
-              <i className="bi bi-plus-square" style={{ fontSize: "24px" }}></i>
-            </div>
-          </button>
           {showInpuNovoProd && (
             <>
               <input
@@ -448,25 +447,6 @@ function App() {
             </>
           )}
           {modal}
-          {!showInpuNovoProd && (
-            <>
-              <button
-                onClick={() => ocultaDesocultarProdutos(!isOcultar)}
-                className="button-reset"
-              >
-                <i className={classOcultar} style={{ fontSize: "24px" }}></i>
-              </button>
-              <button
-                onClick={() => setModalIsOpen(true)}
-                className="button-reset"
-              >
-                <i
-                  className="bi bi-arrow-clockwise"
-                  style={{ fontSize: "24px" }}
-                ></i>
-              </button>
-            </>
-          )}
           <div
             style={{
               position: "fixed",
@@ -494,6 +474,35 @@ function App() {
               <i
                 className="bi bi-bag-plus-fill"
                 style={{ fontSize: "20px" }}
+              ></i>
+            </button>
+            <button
+              onClick={adicionarProduto}
+              className="button-reset"
+              style={{ color: "white" }}
+            >
+              <div>
+                <i
+                  className="bi bi-plus-square"
+                  style={{ fontSize: "24px" }}
+                ></i>
+              </div>
+            </button>
+            <button
+              onClick={() => ocultaDesocultarProdutos(!isOcultar)}
+              className="button-reset"
+              style={{ color: "white" }}
+            >
+              <i className={classOcultar} style={{ fontSize: "24px" }}></i>
+            </button>
+            <button
+              onClick={() => setModalIsOpen(true)}
+              className="button-reset"
+              style={{ color: "white" }}
+            >
+              <i
+                className="bi bi-arrow-clockwise"
+                style={{ fontSize: "24px" }}
               ></i>
             </button>
             <div>
