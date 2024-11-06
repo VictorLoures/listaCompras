@@ -1,6 +1,5 @@
 {
   "name": "lista_compras",
-  "homepage": "https://victorloures.github.io/listaCompras/",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
