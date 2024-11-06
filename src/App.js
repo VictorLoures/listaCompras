@@ -336,7 +336,8 @@ function App() {
       });
     };
 
-    const todosProdutos = produtosAlimen.concat(produtosLimp);
+    const todosProdutos =
+      produtosAlimen && produtosLimp ? produtosAlimen.concat(produtosLimp) : [];
 
     const pordutosJaPegosM1 = todosProdutos.filter((it) => it.m1);
     const pordutosJaPegosM2 = todosProdutos.filter((it) => it.m2);
