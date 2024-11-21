@@ -22,13 +22,13 @@ function App() {
     sortArray(produtosIniciaisLimpeza)
   );
 
-  const [showInpuNovoProd, setShowInpuNovoProd] = useState(false);
   const [produtoNovo, setProdutoNovo] = useState("");
   const [produtoEditado, setProdutoEditado] = useState("");
   const [estiloDisplay, setEstiloDisplay] = useState({});
   const [isOcultar, setIsOcultar] = useState(false);
   const [msgProdutoExistente, setMsgProdutoExistente] = useState("");
   const [modalIsOpen, setModalIsOpen] = useState(false);
+  const [modalIsOpenIncluir, setModalIsOpenIncuir] = useState(false);
 
   const [estilo, setEstilo] = useState({});
 
@@ -111,7 +111,7 @@ function App() {
   };
 
   const adicionarProduto = () => {
-    setShowInpuNovoProd(true);
+    setModalIsOpenIncuir(true);
   };
 
   const adicionarProdutoNaoPadrao = () => {
@@ -128,10 +128,15 @@ function App() {
     toast.success("Produto incluido com sucesso");
     atualizarStates(novaLista, setProdutoNovo);
     ativarEdicaoItem(newProduto, novaLista);
+    setModalIsOpenIncuir(false);
+    window.scrollTo({
+      top: document.body.scrollHeight,
+      behavior: "smooth",
+    });
   };
 
   const cancelarAdicionar = () => {
-    setShowInpuNovoProd(false);
+    setModalIsOpenIncuir(false);
     setProdutoNovo("");
     setMsgProdutoExistente("");
   };
@@ -149,12 +154,12 @@ function App() {
   const atualizarStates = (lista, funcaoSetState) => {
     setProdutosLimpeza(lista);
     atualizarLocalStorage(produtosAlimentos, lista);
-    setShowInpuNovoProd(false);
+    setModalIsOpenIncuir(false);
     funcaoSetState("");
   };
 
   const editarProdutoNaoPadrao = (prod) => {
-    setShowInpuNovoProd(true);
+    setModalIsOpenIncuir(true);
     setProdutoNovo(prod);
     setProdutoEditado(prod);
   };
@@ -228,6 +233,50 @@ function App() {
           <Button variant="primary" onClick={reset}>
             Resetar
           </Button>
+        </Modal.Footer>
+      </Modal>
+    </div>
+  );
+
+  const modalIncluirProduto = (
+    <div>
+      <Modal
+        show={modalIsOpenIncluir}
+        onHide={() => setModalIsOpenIncuir(false)}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Incluir novo produto</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div
+            style={{ display: "flex", justifyContent: "center", gap: "5px" }}
+          >
+            <span>Produto: </span>
+            <input
+              type="text"
+              id="novoProduto"
+              name="novoProduto"
+              onChange={onChangeProdutoNovo}
+              value={produtoNovo}
+              style={{ position: "relative", bottom: "5px" }}
+              autocomplete="off"
+            />
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={cancelarAdicionar}>
+            Cancelar
+          </Button>
+          {produtoEditado.length <= 0 && (
+            <Button variant="primary" onClick={adicionarProdutoNaoPadrao}>
+              Adicionar
+            </Button>
+          )}
+          {produtoEditado.length > 0 && (
+            <Button variant="primary" onClick={atualizarProdutoNaoPadrao}>
+              Atualizar
+            </Button>
+          )}
         </Modal.Footer>
       </Modal>
     </div>
@@ -328,59 +377,8 @@ function App() {
           <div className="produtoJaExiste">{msgProdutoExistente}</div>
         )}
         <div className="acoes">
-          {showInpuNovoProd && (
-            <>
-              <input
-                type="text"
-                id="novoProduto"
-                name="novoProduto"
-                onChange={onChangeProdutoNovo}
-                value={produtoNovo}
-                style={{ position: "relative", bottom: "5px" }}
-                autocomplete="off"
-              />
-              {produtoEditado.length <= 0 && (
-                <>
-                  <button
-                    onClick={cancelarAdicionar}
-                    className="button-reset"
-                    style={{ margin: "3px" }}
-                  >
-                    <i
-                      className="bi bi-x-circle"
-                      style={{ fontSize: "24px" }}
-                    ></i>
-                  </button>
-                  <button
-                    onClick={adicionarProdutoNaoPadrao}
-                    className="button-reset"
-                    style={{
-                      margin: "3px",
-                      padding: "0px",
-                    }}
-                    disabled={msgProdutoExistente.length > 0}
-                  >
-                    <i
-                      className="bi bi-arrow-right-square"
-                      style={{ fontSize: "24px" }}
-                    ></i>
-                  </button>
-                </>
-              )}
-              {produtoEditado.length > 0 && (
-                <button
-                  onClick={atualizarProdutoNaoPadrao}
-                  className="button-reset"
-                >
-                  <i
-                    className="bi bi-arrow-right-square"
-                    style={{ fontSize: "24px" }}
-                  ></i>
-                </button>
-              )}
-            </>
-          )}
           {modal}
+          {modalIncluirProduto}
           <div
             style={{
               position: "fixed",
