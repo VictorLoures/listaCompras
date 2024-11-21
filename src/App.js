@@ -29,9 +29,6 @@ function App() {
   const [isOcultar, setIsOcultar] = useState(false);
   const [msgProdutoExistente, setMsgProdutoExistente] = useState("");
   const [modalIsOpen, setModalIsOpen] = useState(false);
-  const [totalPagarM1, setTotalPagarM1] = useState(0);
-  const [totalPagarM2, setTotalPagarM2] = useState(0);
-  const [totalPagar, setTotalPagar] = useState(0);
 
   const [estilo, setEstilo] = useState({});
 
@@ -54,10 +51,7 @@ function App() {
     const ocultar = JSON.parse(localStorage.getItem("ocultar"));
     ocultaDesocultarProdutos(ocultar);
     setIsOcultar(ocultar);
-    calcularTotal(
-      JSON.parse(produtosAlimentosLocalStorage),
-      JSON.parse(produtosLimpezaLocalStorage)
-    );
+    // eslint-disable-next-line
   }, []);
 
   const atualizarLocalStorage = (produtosAlimentos, produtosLimpeza) => {
@@ -74,39 +68,22 @@ function App() {
     );
   };
 
-  const onChangeAlimentos = (valor, produto, idCampo, recalcular = false) => {
-    alterarCheckMercados(valor, produto, idCampo);
+  const onChangeAlimentos = (valor, produto, idCampo) => {
     let listaProdutos = [...produtosAlimentos];
     valor = idCampo === "preco" ? formatPreco(valor, idCampo) : valor;
     listaProdutos = atualizarLista(valor, produto, idCampo, listaProdutos);
 
     setProdutosAlimentos(listaProdutos);
     atualizarLocalStorage(listaProdutos, produtosLimpeza);
-    if (idCampo === "m1" || idCampo === "m2" || recalcular) {
-      calcularTotal(listaProdutos, produtosLimpeza);
-    }
   };
 
-  const onChangeLimpeza = (valor, produto, idCampo, recalcular = false) => {
-    alterarCheckMercados(valor, produto, idCampo);
+  const onChangeLimpeza = (valor, produto, idCampo) => {
     let listaProdutos = [...produtosLimpeza];
     valor = idCampo === "preco" ? formatPreco(valor) : valor;
     listaProdutos = atualizarLista(valor, produto, idCampo, listaProdutos);
 
     setProdutosLimpeza(listaProdutos);
     atualizarLocalStorage(produtosAlimentos, listaProdutos);
-    if (idCampo === "m1" || idCampo === "m2" || recalcular) {
-      calcularTotal(produtosAlimentos, listaProdutos);
-    }
-  };
-
-  const alterarCheckMercados = (valor, produto, idCampo) => {
-    if (idCampo === "m1" && valor) {
-      produto.m2 = false;
-    }
-    if (idCampo === "m2" && valor) {
-      produto.m1 = false;
-    }
   };
 
   const formatPreco = (preco) => {
@@ -140,7 +117,6 @@ function App() {
   const adicionarProdutoNaoPadrao = () => {
     const newProduto = {
       m1: false,
-      m2: false,
       qte: 1,
       produto: produtoNovo,
       preco: "R$ 0,00",
@@ -189,7 +165,6 @@ function App() {
     atualizarLocalStorage(produtosAlimentos, novaLista);
     setMsgProdutoExistente("");
     produtoExcluindo.current = produto;
-    calcularTotal(produtosAlimentos, novaLista);
   };
 
   const ocultaDesocultarProdutos = (ocultar) => {
@@ -206,7 +181,6 @@ function App() {
     ocultaDesocultarProdutos(false);
     setMsgProdutoExistente("");
     setModalIsOpen(false);
-    calcularTotal(produtosIniciaisAlimentos, produtosIniciaisLimpeza);
     produtoExcluindo.current = null;
     toast.success("Lista resetada com sucesso!");
   };
@@ -316,52 +290,13 @@ function App() {
         ? 0
         : produtoAtivo.qte - 1;
       if (isAlimento) {
-        onChangeAlimentos(qte, produtoAtivo, "qte", true);
+        onChangeAlimentos(qte, produtoAtivo, "qte");
       } else {
-        onChangeLimpeza(qte, produtoAtivo, "qte", true);
+        onChangeLimpeza(qte, produtoAtivo, "qte");
       }
     } else {
       toast.warn("Selecione um produto!");
     }
-  };
-
-  const calcularTotal = (
-    produtosAlimen = produtosAlimentos,
-    produtosLimp = produtosLimpeza
-  ) => {
-    const fmtValor = (valor) => {
-      return valor.toLocaleString("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-      });
-    };
-
-    const todosProdutos =
-      produtosAlimen && produtosLimp ? produtosAlimen.concat(produtosLimp) : [];
-
-    const pordutosJaPegosM1 = todosProdutos.filter((it) => it.m1);
-    const pordutosJaPegosM2 = todosProdutos.filter((it) => it.m2);
-
-    let totalM1 = atualizarTotal(pordutosJaPegosM1, setTotalPagarM1, fmtValor);
-    let totalM2 = atualizarTotal(pordutosJaPegosM2, setTotalPagarM2, fmtValor);
-
-    setTotalPagar(fmtValor(totalM1 + totalM2));
-  };
-
-  const atualizarTotal = (produtos, setValor, fmtValor) => {
-    const extractValor = (valor) => {
-      return Number(valor.substring(3).replace(",", "."));
-    };
-
-    let total = 0;
-    if (produtos && produtos.length > 0) {
-      const valores = produtos.map((it) => extractValor(it.preco) * it.qte);
-      total = valores.reduce((preco1, preco2) => preco1 + preco2);
-      setValor(fmtValor(total));
-    } else {
-      setValor(fmtValor(0));
-    }
-    return total;
   };
 
   return (
@@ -378,7 +313,6 @@ function App() {
           estiloDisplay={estiloDisplay}
           ativarEdicaoItem={ativarEdicaoItem}
           estilo={estilo}
-          calcularTotal={calcularTotal}
         />
         <ComponenteTabela
           titulo={"Limpeza"}
@@ -389,7 +323,6 @@ function App() {
           estiloDisplay={estiloDisplay}
           ativarEdicaoItem={ativarEdicaoItem}
           estilo={estilo}
-          calcularTotal={calcularTotal}
         />
         {msgProdutoExistente.length > 0 && (
           <div className="produtoJaExiste">{msgProdutoExistente}</div>
@@ -454,7 +387,7 @@ function App() {
               bottom: "0",
               left: "0",
               width: "100%",
-              height: "100px",
+              height: "60px",
               backgroundColor: "#333",
               textAlign: "center",
               color: "white",
@@ -506,11 +439,6 @@ function App() {
                 style={{ fontSize: "24px" }}
               ></i>
             </button>
-            <div>
-              <span>M1: {totalPagarM1} / </span>
-              <span>M2: {totalPagarM2} / </span>
-              <span> M1 + M2: {totalPagar}</span>
-            </div>
           </div>
         </div>
       </div>

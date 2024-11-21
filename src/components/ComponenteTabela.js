@@ -7,7 +7,6 @@ const ComponenteTabela = ({
   estiloDisplay,
   ativarEdicaoItem,
   estilo,
-  calcularTotal,
 }) => {
   const onChangeCampo = (valor, produto, idCampo) => {
     onChange(valor, produto, idCampo);
@@ -37,8 +36,7 @@ const ComponenteTabela = ({
       <table>
         <thead>
           <tr>
-            <th style={{ width: "45px" }}>M1</th>
-            <th style={{ width: "45px" }}>M2</th>
+            <th style={{ width: "90px" }}>Já pegou?</th>
             <th style={{ width: "5px" }}>Qtd.</th>
             <th style={{ width: "250px" }}>Produto</th>
             <th style={{ width: "50px" }}>Preço</th>
@@ -55,23 +53,16 @@ const ComponenteTabela = ({
                   checked={prod.m1}
                   onChange={(e) => onChangeCampo(e.target.checked, prod, "m1")}
                   disabled={prod.qte === 0}
-                  style={{ transform: "scale(1.5)" }}
-                />
-              </td>
-              <td>
-                <input
-                  type="checkbox"
-                  id="m2"
-                  name="m2"
-                  checked={prod.m2}
-                  onChange={(e) => onChangeCampo(e.target.checked, prod, "m2")}
-                  disabled={prod.qte === 0}
-                  style={{ transform: "scale(1.5)" }}
+                  style={{ transform: "scale(2.5)" }}
                 />
               </td>
               <td
                 className="tdQte"
-                style={{ display: "flex", justifyContent: "center" }}
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  flexGrow: 1,
+                }}
                 onClick={() => ativarEdicaoItem(prod)}
               >
                 <label>{prod.qte}</label>
@@ -126,7 +117,6 @@ const ComponenteTabela = ({
                       disabled={prod.qte === 0}
                       style={{ width: "70px" }}
                       onClick={() => setCursosrFinal(`preco-${prod.produto}`)}
-                      onBlur={() => calcularTotal()}
                     />
                   )}
                   {!prod.selected && (
