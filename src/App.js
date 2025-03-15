@@ -4,6 +4,8 @@ import {
   sortArray,
   produtosIniciaisAlimentos,
   produtosIniciaisLimpeza,
+  CATEGORIA_ALIMENTOS,
+  CATEGORIA_LIMPEZA,
 } from "./utils/ProdutosIniciais";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -23,6 +25,11 @@ function App() {
   );
 
   const [produtoNovo, setProdutoNovo] = useState("");
+  const [incluirPadrao, setIncluirPadrao] = useState(false);
+  const [resetarListaOriginal, setResetarListaOriginal] = useState(false);
+  const [categoria, setCategoria] = useState("");
+  const [checkAlimentos, setCheckAlimentos] = useState(false);
+  const [checkLimpeza, setCheckLimpeza] = useState(false);
   const [produtoEditado, setProdutoEditado] = useState("");
   const [estiloDisplay, setEstiloDisplay] = useState({});
   const [isOcultar, setIsOcultar] = useState(false);
@@ -111,63 +118,121 @@ function App() {
   };
 
   const adicionarProduto = () => {
+    setProdutoNovo("");
     setModalIsOpenIncuir(true);
   };
 
   const adicionarProdutoNaoPadrao = () => {
-    const newProduto = {
-      m1: false,
-      qte: 1,
-      produto: produtoNovo,
-      preco: "R$ 0,00",
-      isAdicional: true,
-      selected: true,
-    };
-    const novaLista = produtosLimpeza.map((it) => it);
-    novaLista.push(newProduto);
-    toast.success("Produto incluido com sucesso");
-    atualizarStates(novaLista, setProdutoNovo);
-    ativarEdicaoItem(newProduto, novaLista);
-    setModalIsOpenIncuir(false);
-    window.scrollTo({
-      top: document.body.scrollHeight,
-      behavior: "smooth",
-    });
+    if (categoria) {
+      const categoriaSelecionada = checkAlimentos
+        ? CATEGORIA_ALIMENTOS
+        : CATEGORIA_LIMPEZA;
+      const newProduto = {
+        m1: false,
+        qte: 1,
+        produto: produtoNovo,
+        preco: "R$ 0,00",
+        isAdicional: true,
+        selected: true,
+        originalPadrao: false,
+        resetarPadrao: incluirPadrao,
+        categoria: categoriaSelecionada,
+      };
+      const isAlimentos = categoriaSelecionada === CATEGORIA_ALIMENTOS;
+      let novaLista = isAlimentos
+        ? produtosAlimentos.map((it) => it)
+        : produtosLimpeza.map((it) => it);
+      novaLista.push(newProduto);
+      novaLista = sortArray(novaLista);
+      toast.success("Produto incluido com sucesso");
+      atualizarStates(novaLista, setProdutoNovo, isAlimentos);
+      ativarEdicaoItem(
+        newProduto,
+        isAlimentos ? novaLista : produtosAlimentos,
+        !isAlimentos ? novaLista : produtosLimpeza
+      );
+      setModalIsOpenIncuir(false);
+      window.scrollTo({
+        top: document.body.scrollHeight,
+        behavior: "smooth",
+      });
+    } else {
+      toast.warning("Selecione uma categoria");
+    }
   };
 
   const cancelarAdicionar = () => {
     setModalIsOpenIncuir(false);
     setProdutoNovo("");
     setMsgProdutoExistente("");
+    setIncluirPadrao(false);
+    setCheckAlimentos(false);
+    setCheckLimpeza(false);
   };
 
   const atualizarProdutoNaoPadrao = () => {
-    const novaLista = produtosLimpeza.map((it) => {
-      if (it.produto === produtoEditado) {
-        it.produto = produtoNovo;
-      }
-      return it;
-    });
-    atualizarStates(novaLista, setProdutoEditado);
+    if (categoria) {
+      // fazer o join das listas e salvar o obj do produto
+      // de acordo com a categoria remover de uma lista e colocar em outra
+      const novaLista = produtosLimpeza.map((it) => {
+        if (it.produto === produtoEditado) {
+          it.produto = produtoNovo;
+          it.resetarPadrao = incluirPadrao;
+          it.categoria = checkAlimentos
+            ? CATEGORIA_ALIMENTOS
+            : CATEGORIA_LIMPEZA;
+        }
+        return it;
+      });
+      atualizarStates(novaLista, setProdutoEditado);
+    } else {
+      toast.warning("Selecione uma categoria");
+    }
   };
 
-  const atualizarStates = (lista, funcaoSetState) => {
-    setProdutosLimpeza(lista);
-    atualizarLocalStorage(produtosAlimentos, lista);
+  const atualizarStates = (lista, funcaoSetState, isCategoriaAlimentos) => {
+    if (isCategoriaAlimentos) {
+      setProdutosAlimentos(lista);
+      atualizarLocalStorage(lista, produtosLimpeza);
+    } else {
+      setProdutosLimpeza(lista);
+      atualizarLocalStorage(produtosAlimentos, lista);
+    }
+
     setModalIsOpenIncuir(false);
+    setIncluirPadrao(false);
+    setCategoria(null);
+    setCheckAlimentos(false);
+    setCheckLimpeza(false);
     funcaoSetState("");
   };
 
   const editarProdutoNaoPadrao = (prod) => {
     setModalIsOpenIncuir(true);
-    setProdutoNovo(prod);
-    setProdutoEditado(prod);
+    setProdutoNovo(prod.produto);
+    setProdutoEditado(prod.produto);
+    setIncluirPadrao(prod.resetarPadrao);
+    const isCategoriaAlimentos = prod.categoria === CATEGORIA_ALIMENTOS;
+    setCategoria(
+      isCategoriaAlimentos ? CATEGORIA_ALIMENTOS : CATEGORIA_LIMPEZA
+    );
+    setCheckAlimentos(isCategoriaAlimentos);
+    setCheckLimpeza(!isCategoriaAlimentos);
   };
 
   const excluirProdutoNaoPadrao = (produto) => {
-    const novaLista = produtosLimpeza.filter((it) => it.produto !== produto);
-    setProdutosLimpeza(novaLista);
-    atualizarLocalStorage(produtosAlimentos, novaLista);
+    const isAlimentos = produto.categoria === CATEGORIA_ALIMENTOS;
+    const novaLista = isAlimentos
+      ? produtosAlimentos.filter((it) => it.produto !== produto.produto)
+      : produtosLimpeza.filter((it) => it.produto !== produto);
+
+    if (isAlimentos) {
+      setProdutosAlimentos(novaLista);
+      atualizarLocalStorage(novaLista, produtosLimpeza);
+    } else {
+      setProdutosLimpeza(novaLista);
+      atualizarLocalStorage(produtosAlimentos, novaLista);
+    }
     setMsgProdutoExistente("");
     produtoExcluindo.current = produto;
   };
@@ -179,13 +244,32 @@ function App() {
   };
 
   const reset = () => {
-    setProdutosAlimentos(produtosIniciaisAlimentos);
-    setProdutosLimpeza(produtosIniciaisLimpeza);
-    atualizarLocalStorage(produtosIniciaisAlimentos, produtosIniciaisLimpeza);
+    let pordutosAlimentosJoin = [];
+    let pordutosLimpezaJoin = [];
+    if (resetarListaOriginal) {
+      pordutosAlimentosJoin = produtosIniciaisAlimentos;
+      pordutosLimpezaJoin = produtosIniciaisLimpeza;
+    } else {
+      pordutosAlimentosJoin = produtosIniciaisAlimentos.concat(
+        produtosAlimentos.filter((it) => it.resetarPadrao && !it.originalPadrao)
+      );
+      pordutosLimpezaJoin = produtosIniciaisLimpeza.concat(
+        produtosLimpeza.filter((it) => it.resetarPadrao && !it.originalPadrao)
+      );
+    }
+
+    setProdutosAlimentos(pordutosAlimentosJoin);
+    setProdutosLimpeza(pordutosLimpezaJoin);
+    atualizarLocalStorage(pordutosAlimentosJoin, pordutosLimpezaJoin);
     setEstiloDisplay({});
     ocultaDesocultarProdutos(false);
     setMsgProdutoExistente("");
     setModalIsOpen(false);
+    setIncluirPadrao(false);
+    setCheckAlimentos(false);
+    setCheckLimpeza(false);
+    setCategoria(null);
+    setResetarListaOriginal(false);
     produtoExcluindo.current = null;
     toast.success("Lista resetada com sucesso!");
   };
@@ -193,8 +277,10 @@ function App() {
   const onChangeProdutoNovo = (e) => {
     const produto = e.target.value;
     const listaProdutosGeral = produtosAlimentos
-      .map((it) => ({ ...it, secao: "Alimentos" }))
-      .concat(produtosLimpeza.map((it) => ({ ...it, secao: "Limpeza" })));
+      .map((it) => ({ ...it, secao: CATEGORIA_ALIMENTOS }))
+      .concat(
+        produtosLimpeza.map((it) => ({ ...it, secao: CATEGORIA_LIMPEZA }))
+      );
     const produtoExistente = listaProdutosGeral.find((it) => {
       return (
         removerAcentos(it.produto).toUpperCase() ===
@@ -217,6 +303,11 @@ function App() {
     return produto.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   }
 
+  const cancelReset = () => {
+    setModalIsOpen(false);
+    setResetarListaOriginal(false);
+  };
+
   const modal = (
     <div>
       <Modal show={modalIsOpen} onHide={() => setModalIsOpen(false)}>
@@ -225,9 +316,31 @@ function App() {
         </Modal.Header>
         <Modal.Body>
           Tem certeza que deseja resetar todos os produtos?
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: "5px",
+            }}
+          >
+            <input
+              type="checkbox"
+              id="resetarListaOriginal"
+              name="resetarListaOriginal"
+              onChange={(e) => setResetarListaOriginal(e.target.checked)}
+              checked={resetarListaOriginal}
+              style={{ marginRight: "5px", transform: "scale(2)" }}
+              autocomplete="off"
+            />
+
+            <label for="resetarListaOriginal">
+              Resetar para lista original?{" "}
+            </label>
+          </div>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setModalIsOpen(false)}>
+          <Button variant="secondary" onClick={cancelReset}>
             Cancelar
           </Button>
           <Button variant="primary" onClick={reset}>
@@ -237,6 +350,28 @@ function App() {
       </Modal>
     </div>
   );
+
+  const onChangeCategoria = (e) => {
+    if (e.target.id === CATEGORIA_ALIMENTOS) {
+      if (e.target.checked) {
+        setCheckAlimentos(true);
+        setCategoria(CATEGORIA_ALIMENTOS);
+        setCheckLimpeza(false);
+      } else {
+        setCheckAlimentos(false);
+        setCategoria(null);
+      }
+    } else {
+      if (e.target.checked) {
+        setCheckLimpeza(true);
+        setCategoria(CATEGORIA_LIMPEZA);
+        setCheckAlimentos(false);
+      } else {
+        setCheckLimpeza(false);
+        setCategoria(null);
+      }
+    }
+  };
 
   const modalIncluirProduto = (
     <div>
@@ -249,18 +384,79 @@ function App() {
         </Modal.Header>
         <Modal.Body>
           <div
-            style={{ display: "flex", justifyContent: "center", gap: "5px" }}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              gap: "5px",
+            }}
           >
-            <span>Produto: </span>
-            <input
-              type="text"
-              id="novoProduto"
-              name="novoProduto"
-              onChange={onChangeProdutoNovo}
-              value={produtoNovo}
-              style={{ position: "relative", bottom: "5px" }}
-              autocomplete="off"
-            />
+            <div>
+              <span>Produto: </span>
+              <input
+                type="text"
+                id="novoProduto"
+                name="novoProduto"
+                onChange={onChangeProdutoNovo}
+                value={produtoNovo}
+                style={{ position: "relative", bottom: "5px" }}
+                autocomplete="off"
+              />
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: "5px",
+              }}
+            >
+              <input
+                type="checkbox"
+                id="incluirPadrao"
+                name="incluirPadrao"
+                onChange={(e) => setIncluirPadrao(e.target.checked)}
+                checked={incluirPadrao}
+                style={{ marginRight: "5px", transform: "scale(2)" }}
+                autocomplete="off"
+              />
+              <label for="incluirPadrao">Incluir produto como padrão? </label>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "row",
+                justifyContent: "center",
+                gap: "5px",
+              }}
+            >
+              <input
+                type="checkbox"
+                id={CATEGORIA_ALIMENTOS}
+                name={CATEGORIA_ALIMENTOS}
+                onChange={onChangeCategoria}
+                checked={checkAlimentos}
+                style={{ marginRight: "10px", transform: "scale(2)" }}
+                autocomplete="off"
+              />
+              <label for={CATEGORIA_ALIMENTOS} style={{ marginRight: "20px" }}>
+                Alimentos
+              </label>
+              <input
+                type="checkbox"
+                id={CATEGORIA_LIMPEZA}
+                name={CATEGORIA_LIMPEZA}
+                onChange={onChangeCategoria}
+                checked={checkLimpeza}
+                style={{ marginRight: "10px", transform: "scale(2)" }}
+                autocomplete="off"
+              />
+              <label for={CATEGORIA_LIMPEZA}>Limpeza</label>
+            </div>
+
+            {msgProdutoExistente.length > 0 && (
+              <div className="produtoJaExiste">{msgProdutoExistente}</div>
+            )}
           </div>
         </Modal.Body>
         <Modal.Footer>
@@ -268,12 +464,20 @@ function App() {
             Cancelar
           </Button>
           {produtoEditado.length <= 0 && (
-            <Button variant="primary" onClick={adicionarProdutoNaoPadrao}>
+            <Button
+              variant="primary"
+              onClick={adicionarProdutoNaoPadrao}
+              disabled={msgProdutoExistente.length > 0}
+            >
               Adicionar
             </Button>
           )}
           {produtoEditado.length > 0 && (
-            <Button variant="primary" onClick={atualizarProdutoNaoPadrao}>
+            <Button
+              variant="primary"
+              onClick={atualizarProdutoNaoPadrao}
+              disabled={msgProdutoExistente.length > 0}
+            >
               Atualizar
             </Button>
           )}
@@ -282,14 +486,18 @@ function App() {
     </div>
   );
 
-  const ativarEdicaoItem = (produto, listaLimpeza = produtosLimpeza) => {
+  const ativarEdicaoItem = (
+    produto,
+    listaAlimentos = produtosAlimentos,
+    listaLimpeza = produtosLimpeza
+  ) => {
     if (
-      produtosAlimentos &&
+      listaAlimentos &&
       listaLimpeza &&
       produto &&
       produtoExcluindo.current !== produto.produto
     ) {
-      const listaZeradaAlimentos = produtosAlimentos.map((it) => {
+      const listaZeradaAlimentos = listaAlimentos.map((it) => {
         it.selected = it === produto;
         return it;
       });
@@ -373,9 +581,6 @@ function App() {
           ativarEdicaoItem={ativarEdicaoItem}
           estilo={estilo}
         />
-        {msgProdutoExistente.length > 0 && (
-          <div className="produtoJaExiste">{msgProdutoExistente}</div>
-        )}
         <div className="acoes">
           {modal}
           {modalIncluirProduto}
