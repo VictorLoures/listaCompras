@@ -86,13 +86,13 @@ const ComponenteTabela = ({
                 {prod.isAdicional && (
                   <>
                     <button
-                      onClick={() => onClickEditProduto(prod.produto)}
+                      onClick={() => onClickEditProduto(prod)}
                       className="button-reset"
                     >
                       <i className="bi bi-pen" style={{ fontSize: "16px" }}></i>
                     </button>
                     <button
-                      onClick={() => onClickRemoverProduto(prod.produto)}
+                      onClick={() => onClickRemoverProduto(prod)}
                       className="button-reset"
                     >
                       <i
