@@ -172,21 +172,38 @@ function App() {
 
   const atualizarProdutoNaoPadrao = () => {
     if (categoria) {
-      // fazer o join das listas e salvar o obj do produto
-      // de acordo com a categoria remover de uma lista e colocar em outra
-      const novaLista = produtosLimpeza.map((it) => {
-        if (it.produto === produtoEditado) {
-          it.produto = produtoNovo;
-          it.resetarPadrao = incluirPadrao;
-          it.categoria = checkAlimentos
-            ? CATEGORIA_ALIMENTOS
-            : CATEGORIA_LIMPEZA;
+      const objParaAtt = produtosLimpeza
+        .concat(produtosAlimentos)
+        .find((it) => {
+          return it.produto === produtoEditado;
+        });
+      if (objParaAtt) {
+        const newObj = { ...objParaAtt };
+        newObj.produto = produtoNovo;
+        newObj.resetarPadrao = incluirPadrao;
+        newObj.categoria = checkAlimentos
+          ? CATEGORIA_ALIMENTOS
+          : CATEGORIA_LIMPEZA;
+        let listaAlimentosAtt = produtosAlimentos.filter(
+          (it) => it.produto !== produtoEditado
+        );
+        let listaLimpezaAtt = produtosLimpeza.filter(
+          (it) => it.produto !== produtoEditado
+        );
+        if (categoria === CATEGORIA_ALIMENTOS) {
+          listaAlimentosAtt.push(newObj);
+        } else {
+          listaLimpezaAtt.push(newObj);
         }
-        return it;
-      });
-      atualizarStates(novaLista, setProdutoEditado);
-    } else {
-      toast.warning("Selecione uma categoria");
+        listaAlimentosAtt = sortArray(listaAlimentosAtt);
+        listaLimpezaAtt = sortArray(listaLimpezaAtt);
+        setProdutosAlimentos(listaAlimentosAtt);
+        setProdutosLimpeza(listaLimpezaAtt);
+        atualizarLocalStorage(listaAlimentosAtt, listaLimpezaAtt);
+        atualizarStatesDeclarados();
+      } else {
+        toast.warning("Selecione uma categoria");
+      }
     }
   };
 
@@ -199,12 +216,18 @@ function App() {
       atualizarLocalStorage(produtosAlimentos, lista);
     }
 
+    atualizarStatesDeclarados(funcaoSetState);
+  };
+
+  const atualizarStatesDeclarados = (funcaoSetState = null) => {
     setModalIsOpenIncuir(false);
     setIncluirPadrao(false);
     setCategoria(null);
     setCheckAlimentos(false);
     setCheckLimpeza(false);
-    funcaoSetState("");
+    if (funcaoSetState) {
+      funcaoSetState("");
+    }
   };
 
   const editarProdutoNaoPadrao = (prod) => {
@@ -270,6 +293,8 @@ function App() {
     setCheckLimpeza(false);
     setCategoria(null);
     setResetarListaOriginal(false);
+    setProdutoNovo("");
+    setProdutoEditado("");
     produtoExcluindo.current = null;
     toast.success("Lista resetada com sucesso!");
   };
