@@ -35,6 +35,9 @@ function App() {
   const [isOcultar, setIsOcultar] = useState(false);
   const [msgProdutoExistente, setMsgProdutoExistente] = useState("");
   const [modalIsOpen, setModalIsOpen] = useState(false);
+  const [modalIsOpenExcluir, setModalIsOpenExcluir] = useState(false);
+  const [produtoSelecionadoExclusao, setProdutoSelecionadoExclusao] =
+    useState(null);
   const [modalIsOpenIncluir, setModalIsOpenIncuir] = useState(false);
 
   const [estilo, setEstilo] = useState({});
@@ -243,11 +246,16 @@ function App() {
     setCheckLimpeza(!isCategoriaAlimentos);
   };
 
-  const excluirProdutoNaoPadrao = (produto) => {
-    const isAlimentos = produto.categoria === CATEGORIA_ALIMENTOS;
+  const excluirProdutoNaoPadrao = () => {
+    const isAlimentos =
+      produtoSelecionadoExclusao.categoria === CATEGORIA_ALIMENTOS;
     const novaLista = isAlimentos
-      ? produtosAlimentos.filter((it) => it.produto !== produto.produto)
-      : produtosLimpeza.filter((it) => it.produto !== produto);
+      ? produtosAlimentos.filter(
+          (it) => it.produto !== produtoSelecionadoExclusao.produto
+        )
+      : produtosLimpeza.filter(
+          (it) => it.produto !== produtoSelecionadoExclusao.produto
+        );
 
     if (isAlimentos) {
       setProdutosAlimentos(novaLista);
@@ -257,7 +265,10 @@ function App() {
       atualizarLocalStorage(produtosAlimentos, novaLista);
     }
     setMsgProdutoExistente("");
-    produtoExcluindo.current = produto;
+    setProdutoSelecionadoExclusao(null);
+    produtoExcluindo.current = produtoSelecionadoExclusao;
+    setModalIsOpenExcluir(false);
+    toast.success("Produto excluido com sucesso");
   };
 
   const ocultaDesocultarProdutos = (ocultar) => {
@@ -281,6 +292,12 @@ function App() {
       );
     }
 
+    pordutosAlimentosJoin.forEach((it) => resetProdutoNaoPadrao(it));
+    pordutosLimpezaJoin.forEach((it) => resetProdutoNaoPadrao(it));
+
+    pordutosAlimentosJoin = sortArray(pordutosAlimentosJoin);
+    pordutosLimpezaJoin = sortArray(pordutosLimpezaJoin);
+
     setProdutosAlimentos(pordutosAlimentosJoin);
     setProdutosLimpeza(pordutosLimpezaJoin);
     atualizarLocalStorage(pordutosAlimentosJoin, pordutosLimpezaJoin);
@@ -297,6 +314,15 @@ function App() {
     setProdutoEditado("");
     produtoExcluindo.current = null;
     toast.success("Lista resetada com sucesso!");
+  };
+
+  const resetProdutoNaoPadrao = (prod) => {
+    if (!prod.originalPadrao) {
+      prod.qte = 0;
+      prod.preco = "R$ 0,00";
+      prod.selected = false;
+      prod.m1 = false;
+    }
   };
 
   const onChangeProdutoNovo = (e) => {
@@ -370,6 +396,38 @@ function App() {
           </Button>
           <Button variant="primary" onClick={reset}>
             Resetar
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    </div>
+  );
+
+  const onClickExcluir = (produto) => {
+    setModalIsOpenExcluir(true);
+    setProdutoSelecionadoExclusao(produto);
+  };
+
+  const onCancelExclusao = () => {
+    setProdutoSelecionadoExclusao(null);
+    setModalIsOpenExcluir(false);
+  };
+
+  const modalExcluir = (
+    <div>
+      <Modal
+        show={modalIsOpenExcluir}
+        onHide={() => setModalIsOpenExcluir(false)}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Excluir produto</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>Tem certeza que deseja excluir o produto?</Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={onCancelExclusao}>
+            Cancelar
+          </Button>
+          <Button variant="primary" onClick={excluirProdutoNaoPadrao}>
+            Excluir
           </Button>
         </Modal.Footer>
       </Modal>
@@ -591,7 +649,7 @@ function App() {
           produtos={produtosAlimentos}
           onChange={onChangeAlimentos}
           onClickEditProduto={editarProdutoNaoPadrao}
-          onClickRemoverProduto={excluirProdutoNaoPadrao}
+          onClickRemoverProduto={onClickExcluir}
           estiloDisplay={estiloDisplay}
           ativarEdicaoItem={ativarEdicaoItem}
           estilo={estilo}
@@ -601,13 +659,14 @@ function App() {
           produtos={produtosLimpeza}
           onChange={onChangeLimpeza}
           onClickEditProduto={editarProdutoNaoPadrao}
-          onClickRemoverProduto={excluirProdutoNaoPadrao}
+          onClickRemoverProduto={onClickExcluir}
           estiloDisplay={estiloDisplay}
           ativarEdicaoItem={ativarEdicaoItem}
           estilo={estilo}
         />
         <div className="acoes">
           {modal}
+          {modalExcluir}
           {modalIncluirProduto}
           <div
             style={{
