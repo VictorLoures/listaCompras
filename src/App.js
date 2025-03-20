@@ -474,7 +474,7 @@ function App() {
               gap: "5px",
             }}
           >
-            <div>
+            <div style={{ marginTop: "15px" }}>
               <span>Produto: </span>
               <input
                 type="text"
@@ -492,6 +492,7 @@ function App() {
                 justifyContent: "center",
                 alignItems: "center",
                 gap: "5px",
+                marginBottom: "10px",
               }}
             >
               <input
