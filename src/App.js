@@ -159,6 +159,7 @@ function App() {
         top: document.body.scrollHeight,
         behavior: "smooth",
       });
+      atualizarStatesModalProduto();
     } else {
       toast.warning("Selecione uma categoria");
     }
@@ -204,6 +205,7 @@ function App() {
         setProdutosLimpeza(listaLimpezaAtt);
         atualizarLocalStorage(listaAlimentosAtt, listaLimpezaAtt);
         atualizarStatesDeclarados();
+        atualizarStatesModalProduto();
       } else {
         toast.warning("Selecione uma categoria");
       }
@@ -405,6 +407,16 @@ function App() {
   const onClickExcluir = (produto) => {
     setModalIsOpenExcluir(true);
     setProdutoSelecionadoExclusao(produto);
+    atualizarStatesModalProduto();
+  };
+
+  const atualizarStatesModalProduto = () => {
+    setIncluirPadrao(false);
+    setCheckAlimentos(false);
+    setCheckLimpeza(false);
+    setCategoria(null);
+    setProdutoNovo("");
+    setProdutoEditado("");
   };
 
   const onCancelExclusao = () => {
