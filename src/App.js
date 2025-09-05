@@ -12,6 +12,7 @@ import "react-toastify/dist/ReactToastify.css";
 import ComponenteTabela from "./components/ComponenteTabela";
 import { Button, Modal } from "react-bootstrap";
 import { toast } from "react-toastify";
+import CameraScanner from "./components/camera/CameraScanner";
 
 const CHAVE_LOCAL_STORAGE_ALIMENTOS = "produtosAlimentosLocalStorage";
 const CHAVE_LOCAL_STORAGE_LIMPEZA = "produtosLimpezaLocalStorage";
@@ -687,7 +688,7 @@ function App() {
               bottom: "0",
               left: "0",
               width: "100%",
-              height: "60px",
+              height: "240px",
               backgroundColor: "#333",
               textAlign: "center",
               color: "white",
@@ -739,6 +740,7 @@ function App() {
                 style={{ fontSize: "24px" }}
               ></i>
             </button>
+            <CameraScanner />
           </div>
         </div>
       </div>
