@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 import {
   sortArray,
@@ -10,7 +10,7 @@ import {
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ComponenteTabela from "./components/ComponenteTabela";
-import { Button, Modal } from "react-bootstrap";
+import Modal from "./components/Modal";
 import { toast } from "react-toastify";
 
 const CHAVE_LOCAL_STORAGE_ALIMENTOS = "produtosAlimentosLocalStorage";
@@ -31,7 +31,6 @@ function App() {
   const [checkAlimentos, setCheckAlimentos] = useState(false);
   const [checkLimpeza, setCheckLimpeza] = useState(false);
   const [produtoEditado, setProdutoEditado] = useState("");
-  const [estiloDisplay, setEstiloDisplay] = useState({});
   const [isOcultar, setIsOcultar] = useState(false);
   const [msgProdutoExistente, setMsgProdutoExistente] = useState("");
   const [modalIsOpen, setModalIsOpen] = useState(false);
@@ -40,11 +39,10 @@ function App() {
     useState(null);
   const [modalIsOpenIncluir, setModalIsOpenIncuir] = useState(false);
 
-  const [estilo, setEstilo] = useState({});
+  const [search, setSearch] = useState("");
+  const [filtro, setFiltro] = useState("todos");
 
-  const produtoExcluindo = useRef();
-
-  const classOcultar = !isOcultar ? "bi bi-eye-slash" : "bi bi-eye";
+  const classOcultar = !isOcultar ? "bi bi-eye" : "bi bi-eye-slash";
 
   useEffect(() => {
     const produtosAlimentosLocalStorage = localStorage.getItem(
@@ -59,7 +57,6 @@ function App() {
       setProdutosLimpeza(JSON.parse(produtosLimpezaLocalStorage));
     }
     const ocultar = JSON.parse(localStorage.getItem("ocultar"));
-    ocultaDesocultarProdutos(ocultar);
     setIsOcultar(ocultar);
     // eslint-disable-next-line
   }, []);
@@ -80,7 +77,7 @@ function App() {
 
   const onChangeAlimentos = (valor, produto, idCampo) => {
     let listaProdutos = [...produtosAlimentos];
-    valor = idCampo === "preco" ? formatPreco(valor, idCampo) : valor;
+    valor = idCampo === "preco" ? formatPreco(valor) : valor;
     listaProdutos = atualizarLista(valor, produto, idCampo, listaProdutos);
 
     setProdutosAlimentos(listaProdutos);
@@ -96,6 +93,21 @@ function App() {
     atualizarLocalStorage(produtosAlimentos, listaProdutos);
   };
 
+  const dispatchChange = (valor, produto, idCampo) => {
+    if (produto.categoria === CATEGORIA_ALIMENTOS) {
+      onChangeAlimentos(valor, produto, idCampo);
+    } else {
+      onChangeLimpeza(valor, produto, idCampo);
+    }
+  };
+
+  const onInc = (produto) => dispatchChange(produto.qte + 1, produto, "qte");
+  const onDec = (produto) =>
+    dispatchChange(Math.max(0, produto.qte - 1), produto, "qte");
+  const onToggleCheck = (produto) => dispatchChange(!produto.m1, produto, "m1");
+  const onChangePreco = (valor, produto) =>
+    dispatchChange(valor, produto, "preco");
+
   const formatPreco = (preco) => {
     let precoFmt = preco.replace(/\D/g, "");
     precoFmt = (parseFloat(precoFmt) / 100).toLocaleString("pt-BR", {
@@ -104,6 +116,21 @@ function App() {
     });
     return precoFmt.includes("NaN") ? "R$ 0,00" : precoFmt;
   };
+
+  const parsePreco = (preco) => {
+    const n = parseFloat(
+      String(preco)
+        .replace(/[^\d,]/g, "")
+        .replace(",", ".")
+    );
+    return isNaN(n) ? 0 : n;
+  };
+
+  const fmtMoney = (n) =>
+    n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  const linhaFmt = (produto) =>
+    fmtMoney(produto.qte * parsePreco(produto.preco));
 
   const atualizarLista = (valor, produto, idCampo, listaProdutos) => {
     const objParaAtualizar = listaProdutos.find(
@@ -136,7 +163,7 @@ function App() {
         produto: produtoNovo,
         preco: "R$ 0,00",
         isAdicional: true,
-        selected: true,
+        selected: false,
         originalPadrao: false,
         resetarPadrao: incluirPadrao,
         categoria: categoriaSelecionada,
@@ -149,16 +176,7 @@ function App() {
       novaLista = sortArray(novaLista);
       toast.success("Produto incluido com sucesso");
       atualizarStates(novaLista, setProdutoNovo, isAlimentos);
-      ativarEdicaoItem(
-        newProduto,
-        isAlimentos ? novaLista : produtosAlimentos,
-        !isAlimentos ? novaLista : produtosLimpeza
-      );
       setModalIsOpenIncuir(false);
-      window.scrollTo({
-        top: document.body.scrollHeight,
-        behavior: "smooth",
-      });
       atualizarStatesModalProduto();
     } else {
       toast.warning("Selecione uma categoria");
@@ -268,13 +286,11 @@ function App() {
     }
     setMsgProdutoExistente("");
     setProdutoSelecionadoExclusao(null);
-    produtoExcluindo.current = produtoSelecionadoExclusao;
     setModalIsOpenExcluir(false);
     toast.success("Produto excluido com sucesso");
   };
 
   const ocultaDesocultarProdutos = (ocultar) => {
-    setEstiloDisplay(ocultar ? { display: "none" } : {});
     localStorage.setItem("ocultar", JSON.stringify(ocultar));
     setIsOcultar(ocultar);
   };
@@ -303,7 +319,6 @@ function App() {
     setProdutosAlimentos(pordutosAlimentosJoin);
     setProdutosLimpeza(pordutosLimpezaJoin);
     atualizarLocalStorage(pordutosAlimentosJoin, pordutosLimpezaJoin);
-    setEstiloDisplay({});
     ocultaDesocultarProdutos(false);
     setMsgProdutoExistente("");
     setModalIsOpen(false);
@@ -314,7 +329,8 @@ function App() {
     setResetarListaOriginal(false);
     setProdutoNovo("");
     setProdutoEditado("");
-    produtoExcluindo.current = null;
+    setSearch("");
+    setFiltro("todos");
     toast.success("Lista resetada com sucesso!");
   };
 
@@ -362,46 +378,36 @@ function App() {
   };
 
   const modal = (
-    <div>
-      <Modal show={modalIsOpen} onHide={() => setModalIsOpen(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Resetar produtos</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          Tem certeza que deseja resetar todos os produtos?
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: "5px",
-            }}
-          >
-            <input
-              type="checkbox"
-              id="resetarListaOriginal"
-              name="resetarListaOriginal"
-              onChange={(e) => setResetarListaOriginal(e.target.checked)}
-              checked={resetarListaOriginal}
-              style={{ marginRight: "5px", transform: "scale(2)" }}
-              autoComplete="off"
-            />
-
-            <label htmlFor="resetarListaOriginal">
-              Resetar para lista original?{" "}
-            </label>
-          </div>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={cancelReset}>
+    <Modal
+      show={modalIsOpen}
+      onClose={() => setModalIsOpen(false)}
+      title="Resetar produtos"
+      footer={
+        <>
+          <button className="btn btn--secondary" onClick={cancelReset}>
             Cancelar
-          </Button>
-          <Button variant="primary" onClick={reset}>
+          </button>
+          <button className="btn btn--primary" onClick={reset}>
             Resetar
-          </Button>
-        </Modal.Footer>
-      </Modal>
-    </div>
+          </button>
+        </>
+      }
+    >
+      <p className="modal-text">
+        Tem certeza que deseja resetar todos os produtos?
+      </p>
+      <label className="check-row">
+        <input
+          type="checkbox"
+          id="resetarListaOriginal"
+          name="resetarListaOriginal"
+          onChange={(e) => setResetarListaOriginal(e.target.checked)}
+          checked={resetarListaOriginal}
+          autoComplete="off"
+        />
+        <span>Resetar para lista original?</span>
+      </label>
+    </Modal>
   );
 
   const onClickExcluir = (produto) => {
@@ -425,25 +431,23 @@ function App() {
   };
 
   const modalExcluir = (
-    <div>
-      <Modal
-        show={modalIsOpenExcluir}
-        onHide={() => setModalIsOpenExcluir(false)}
-      >
-        <Modal.Header closeButton>
-          <Modal.Title>Excluir produto</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>Tem certeza que deseja excluir o produto?</Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={onCancelExclusao}>
+    <Modal
+      show={modalIsOpenExcluir}
+      onClose={() => setModalIsOpenExcluir(false)}
+      title="Excluir produto"
+      footer={
+        <>
+          <button className="btn btn--secondary" onClick={onCancelExclusao}>
             Cancelar
-          </Button>
-          <Button variant="primary" onClick={excluirProdutoNaoPadrao}>
+          </button>
+          <button className="btn btn--danger" onClick={excluirProdutoNaoPadrao}>
             Excluir
-          </Button>
-        </Modal.Footer>
-      </Modal>
-    </div>
+          </button>
+        </>
+      }
+    >
+      <p className="modal-text">Tem certeza que deseja excluir o produto?</p>
+    </Modal>
   );
 
   const onChangeCategoria = (e) => {
@@ -469,282 +473,260 @@ function App() {
   };
 
   const modalIncluirProduto = (
-    <div>
-      <Modal
-        show={modalIsOpenIncluir}
-        onHide={() => setModalIsOpenIncuir(false)}
-      >
-        <Modal.Header closeButton>
-          <Modal.Title>Incluir novo produto</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-              gap: "5px",
-            }}
-          >
-            <div style={{ marginTop: "15px" }}>
-              <span>Produto: </span>
-              <input
-                type="text"
-                id="novoProduto"
-                name="novoProduto"
-                onChange={onChangeProdutoNovo}
-                value={produtoNovo}
-                style={{ position: "relative", bottom: "5px" }}
-                autoComplete="off"
-              />
-            </div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                gap: "5px",
-                marginBottom: "10px",
-              }}
-            >
-              <input
-                type="checkbox"
-                id="incluirPadrao"
-                name="incluirPadrao"
-                onChange={(e) => setIncluirPadrao(e.target.checked)}
-                checked={incluirPadrao}
-                style={{ marginRight: "5px", transform: "scale(2)" }}
-                autoComplete="off"
-              />
-              <label htmlFor="incluirPadrao">
-                Incluir produto como padrão?{" "}
-              </label>
-            </div>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "row",
-                justifyContent: "center",
-                gap: "5px",
-              }}
-            >
-              <input
-                type="checkbox"
-                id={CATEGORIA_ALIMENTOS}
-                name={CATEGORIA_ALIMENTOS}
-                onChange={onChangeCategoria}
-                checked={checkAlimentos}
-                style={{ marginRight: "10px", transform: "scale(2)" }}
-                autoComplete="off"
-              />
-              <label
-                htmlFor={CATEGORIA_ALIMENTOS}
-                style={{ marginRight: "20px" }}
-              >
-                Alimentos
-              </label>
-              <input
-                type="checkbox"
-                id={CATEGORIA_LIMPEZA}
-                name={CATEGORIA_LIMPEZA}
-                onChange={onChangeCategoria}
-                checked={checkLimpeza}
-                style={{ marginRight: "10px", transform: "scale(2)" }}
-                autoComplete="off"
-              />
-              <label htmlFor={CATEGORIA_LIMPEZA}>Limpeza</label>
-            </div>
-
-            {msgProdutoExistente.length > 0 && (
-              <div className="produtoJaExiste">{msgProdutoExistente}</div>
-            )}
-          </div>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={cancelarAdicionar}>
+    <Modal
+      show={modalIsOpenIncluir}
+      onClose={() => setModalIsOpenIncuir(false)}
+      title={produtoEditado.length > 0 ? "Editar produto" : "Incluir novo produto"}
+      footer={
+        <>
+          <button className="btn btn--secondary" onClick={cancelarAdicionar}>
             Cancelar
-          </Button>
+          </button>
           {produtoEditado.length <= 0 && (
-            <Button
-              variant="primary"
+            <button
+              className="btn btn--primary"
               onClick={adicionarProdutoNaoPadrao}
               disabled={msgProdutoExistente.length > 0}
             >
               Adicionar
-            </Button>
+            </button>
           )}
           {produtoEditado.length > 0 && (
-            <Button
-              variant="primary"
+            <button
+              className="btn btn--primary"
               onClick={atualizarProdutoNaoPadrao}
               disabled={msgProdutoExistente.length > 0}
             >
               Atualizar
-            </Button>
+            </button>
           )}
-        </Modal.Footer>
-      </Modal>
-    </div>
+        </>
+      }
+    >
+      <div className="modal-field">
+        <label htmlFor="novoProduto">Produto</label>
+        <input
+          className="field-input"
+          type="text"
+          id="novoProduto"
+          name="novoProduto"
+          onChange={onChangeProdutoNovo}
+          value={produtoNovo}
+          placeholder="Nome do produto"
+          autoComplete="off"
+        />
+      </div>
+
+      <label className="check-row">
+        <input
+          type="checkbox"
+          id="incluirPadrao"
+          name="incluirPadrao"
+          onChange={(e) => setIncluirPadrao(e.target.checked)}
+          checked={incluirPadrao}
+          autoComplete="off"
+        />
+        <span>Incluir produto como padrão?</span>
+      </label>
+
+      <div className="cat-choice">
+        <label className={`cat-pill${checkAlimentos ? " is-active" : ""}`}>
+          <input
+            type="checkbox"
+            id={CATEGORIA_ALIMENTOS}
+            name={CATEGORIA_ALIMENTOS}
+            onChange={onChangeCategoria}
+            checked={checkAlimentos}
+            autoComplete="off"
+          />
+          Alimentos
+        </label>
+        <label className={`cat-pill${checkLimpeza ? " is-active" : ""}`}>
+          <input
+            type="checkbox"
+            id={CATEGORIA_LIMPEZA}
+            name={CATEGORIA_LIMPEZA}
+            onChange={onChangeCategoria}
+            checked={checkLimpeza}
+            autoComplete="off"
+          />
+          Limpeza
+        </label>
+      </div>
+
+      {msgProdutoExistente.length > 0 && (
+        <div className="produtoJaExiste">{msgProdutoExistente}</div>
+      )}
+    </Modal>
   );
 
-  const ativarEdicaoItem = (
-    produto,
-    listaAlimentos = produtosAlimentos,
-    listaLimpeza = produtosLimpeza
-  ) => {
-    if (
-      listaAlimentos &&
-      listaLimpeza &&
-      produto &&
-      produtoExcluindo.current !== produto.produto
-    ) {
-      const listaZeradaAlimentos = listaAlimentos.map((it) => {
-        it.selected = it === produto;
-        return it;
-      });
-
-      const listaZeradaLimpeza = listaLimpeza.map((it) => {
-        it.selected = it === produto;
-        return it;
-      });
-
-      changeEstilo(produto);
-
-      setProdutosAlimentos(listaZeradaAlimentos);
-      setProdutosLimpeza(listaZeradaLimpeza);
-      atualizarLocalStorage(listaZeradaAlimentos, listaZeradaLimpeza);
-
-      setTimeout(() => {
-        const campo = document.getElementById(`preco-${produto.produto}`);
-        if (campo) {
-          campo.focus();
-        }
-      }, 200);
-    } else {
-      setEstilo({});
-      produtoExcluindo.current = false;
-    }
-  };
-
-  const changeEstilo = (produto) => {
-    let result = {};
-    if (produto.selected) {
-      result = { backgroundColor: "#f0f0f0" };
-    }
-    setEstilo(result);
-  };
-
-  const adicionarDiminuirQte = (adicionar) => {
-    const produtoAtivo = produtosAlimentos
-      .concat(produtosLimpeza)
-      .find((it) => it.selected);
-
-    if (produtoAtivo) {
-      const isAlimento = produtosAlimentos.includes(produtoAtivo);
-
-      const qte = adicionar
-        ? produtoAtivo.qte + 1
-        : produtoAtivo.qte === 0
-          ? 0
-          : produtoAtivo.qte - 1;
-      if (isAlimento) {
-        onChangeAlimentos(qte, produtoAtivo, "qte");
-      } else {
-        onChangeLimpeza(qte, produtoAtivo, "qte");
+  const filtrarLista = (lista) => {
+    const q = removerAcentos(search).toLowerCase().trim();
+    return lista.filter((prod) => {
+      if (q && !removerAcentos(prod.produto).toLowerCase().includes(q)) {
+        return false;
       }
-    } else {
-      toast.warn("Selecione um produto!");
-    }
+      if (isOcultar && prod.qte === 0) {
+        return false;
+      }
+      if (filtro === "faltam" && prod.m1) {
+        return false;
+      }
+      if (filtro === "pegos" && !prod.m1) {
+        return false;
+      }
+      return true;
+    });
   };
+
+  const alimentosVisiveis = filtrarLista(produtosAlimentos);
+  const limpezaVisiveis = filtrarLista(produtosLimpeza);
+  const semItens =
+    alimentosVisiveis.length === 0 && limpezaVisiveis.length === 0;
+
+  const naLista = produtosAlimentos
+    .concat(produtosLimpeza)
+    .filter((prod) => prod.qte > 0);
+  const countAll = naLista.length;
+  const totalAll = naLista.reduce(
+    (soma, prod) => soma + prod.qte * parsePreco(prod.preco),
+    0
+  );
+  const marcados = naLista.filter((prod) => prod.m1);
+  const totalDone = marcados.reduce(
+    (soma, prod) => soma + prod.qte * parsePreco(prod.preco),
+    0
+  );
+  const pct = countAll ? Math.round((marcados.length / countAll) * 100) : 0;
+
+  const segBtn = (valor, label) => (
+    <button
+      className={`seg-btn${filtro === valor ? " is-active" : ""}`}
+      onClick={() => setFiltro(valor)}
+    >
+      {label}
+    </button>
+  );
 
   return (
-    <div>
+    <div className="app-shell">
       <ToastContainer autoClose={3000} />
-      <h1>Lista de compras</h1>
-      <div className="container">
-        <ComponenteTabela
-          titulo={"Alimentos"}
-          produtos={produtosAlimentos}
-          onChange={onChangeAlimentos}
-          onClickEditProduto={editarProdutoNaoPadrao}
-          onClickRemoverProduto={onClickExcluir}
-          estiloDisplay={estiloDisplay}
-          ativarEdicaoItem={ativarEdicaoItem}
-          estilo={estilo}
-        />
-        <ComponenteTabela
-          titulo={"Limpeza"}
-          produtos={produtosLimpeza}
-          onChange={onChangeLimpeza}
-          onClickEditProduto={editarProdutoNaoPadrao}
-          onClickRemoverProduto={onClickExcluir}
-          estiloDisplay={estiloDisplay}
-          ativarEdicaoItem={ativarEdicaoItem}
-          estilo={estilo}
-        />
-        <div className="acoes">
-          {modal}
-          {modalExcluir}
-          {modalIncluirProduto}
-          <div
-            style={{
-              position: "fixed",
-              bottom: "0",
-              left: "0",
-              width: "100%",
-              height: "60px",
-              backgroundColor: "#333",
-              textAlign: "center",
-              color: "white",
-            }}
-          >
-            <button
-              onClick={() => adicionarDiminuirQte(false)}
-              className={"button-reset"}
-              style={{ color: "white" }}
+      {modal}
+      {modalExcluir}
+      {modalIncluirProduto}
+      <div className="card">
+        <div className="header">
+          <div className="header-top">
+            <div className="header-title">Minhas compras</div>
+            <span className="header-count">{countAll} itens</span>
+          </div>
+
+          <div className="total-card">
+            <div>
+              <div className="total-label">Total estimado</div>
+              <div className="total-value">{fmtMoney(totalAll)}</div>
+              <div className="total-done">
+                {fmtMoney(totalDone)} já no carrinho
+              </div>
+            </div>
+            <div
+              className="progress-ring"
+              style={{
+                background: `conic-gradient(#2f9e5f ${pct}%, #3a4038 ${pct}%)`,
+              }}
             >
-              <i className="bi bi-bag-x-fill" style={{ fontSize: "20px" }}></i>
-            </button>
-            <button
-              onClick={() => adicionarDiminuirQte(true)}
-              className={"button-reset"}
-              style={{ color: "white" }}
-            >
-              <i
-                className="bi bi-bag-plus-fill"
-                style={{ fontSize: "20px" }}
-              ></i>
-            </button>
+              <div className="progress-ring-inner">
+                <span className="progress-ring-pct">{pct}%</span>
+                <span className="progress-ring-caption">pego</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="header-actions">
+            <div className="search">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <circle
+                  cx="11"
+                  cy="11"
+                  r="7"
+                  stroke="#9aa39c"
+                  strokeWidth="2"
+                ></circle>
+                <path
+                  d="M21 21l-4-4"
+                  stroke="#9aa39c"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                ></path>
+              </svg>
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar item…"
+                autoComplete="off"
+              />
+            </div>
             <button
               onClick={adicionarProduto}
-              className="button-reset"
-              style={{ color: "white" }}
+              className="action-btn action-btn--add"
+              aria-label="Incluir produto"
             >
-              <div>
-                <i
-                  className="bi bi-plus-square"
-                  style={{ fontSize: "24px" }}
-                ></i>
-              </div>
+              +
             </button>
             <button
               onClick={() => ocultaDesocultarProdutos(!isOcultar)}
-              className="button-reset"
-              style={{ color: "white" }}
+              className={`action-btn action-btn--ghost${
+                isOcultar ? " is-active" : ""
+              }`}
+              aria-label="Ocultar itens sem quantidade"
             >
-              <i className={classOcultar} style={{ fontSize: "24px" }}></i>
+              <i className={classOcultar}></i>
             </button>
             <button
               onClick={() => setModalIsOpen(true)}
-              className="button-reset"
-              style={{ color: "white" }}
+              className="action-btn action-btn--ghost"
+              aria-label="Resetar lista"
             >
-              <i
-                className="bi bi-arrow-clockwise"
-                style={{ fontSize: "24px" }}
-              ></i>
+              <i className="bi bi-arrow-clockwise"></i>
             </button>
           </div>
+
+          <div className="segmented">
+            {segBtn("todos", "Todos")}
+            {segBtn("faltam", "Faltam")}
+            {segBtn("pegos", "Pegos")}
+          </div>
+        </div>
+
+        <div className="list">
+          {semItens ? (
+            <div className="empty-state">Nenhum item por aqui.</div>
+          ) : (
+            <>
+              <ComponenteTabela
+                titulo={CATEGORIA_ALIMENTOS}
+                produtos={alimentosVisiveis}
+                onInc={onInc}
+                onDec={onDec}
+                onToggleCheck={onToggleCheck}
+                onChangePreco={onChangePreco}
+                onClickEditProduto={editarProdutoNaoPadrao}
+                onClickRemoverProduto={onClickExcluir}
+                linhaFmt={linhaFmt}
+              />
+              <ComponenteTabela
+                titulo={CATEGORIA_LIMPEZA}
+                produtos={limpezaVisiveis}
+                onInc={onInc}
+                onDec={onDec}
+                onToggleCheck={onToggleCheck}
+                onChangePreco={onChangePreco}
+                onClickEditProduto={editarProdutoNaoPadrao}
+                onClickRemoverProduto={onClickExcluir}
+                linhaFmt={linhaFmt}
+              />
+            </>
+          )}
         </div>
       </div>
     </div>
