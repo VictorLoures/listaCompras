@@ -41,6 +41,11 @@ function App() {
 
   const [search, setSearch] = useState("");
   const [filtro, setFiltro] = useState("todos");
+  const [showVoltarTopo, setShowVoltarTopo] = useState(false);
+
+  const voltarAoTopo = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const classOcultar = !isOcultar ? "bi bi-eye" : "bi bi-eye-slash";
 
@@ -59,6 +64,13 @@ function App() {
     const ocultar = JSON.parse(localStorage.getItem("ocultar"));
     setIsOcultar(ocultar);
     // eslint-disable-next-line
+  }, []);
+
+  useEffect(() => {
+    const onScroll = () => setShowVoltarTopo(window.scrollY > 250);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   const atualizarLocalStorage = (produtosAlimentos, produtosLimpeza) => {
@@ -728,6 +740,16 @@ function App() {
             </>
           )}
         </div>
+
+        {showVoltarTopo && (
+          <button
+            className="back-to-top"
+            onClick={voltarAoTopo}
+            aria-label="Voltar ao topo"
+          >
+            <i className="bi bi-arrow-up"></i>
+          </button>
+        )}
       </div>
     </div>
   );

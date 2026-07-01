@@ -37,6 +37,7 @@ body {
 }
 
 .card {
+  position: relative;
   width: 100%;
   max-width: 460px;
   min-height: 100vh;
@@ -45,6 +46,34 @@ body {
   flex-direction: column;
   overflow: hidden;
   box-shadow: 0 0 60px rgba(20, 30, 24, 0.1);
+}
+
+.back-to-top {
+  position: fixed;
+  left: max(16px, calc(50vw - 214px));
+  bottom: 18px;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: none;
+  background: var(--dark);
+  color: #fff;
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(20, 30, 24, 0.28);
+  z-index: 50;
+  transition: 0.15s;
+}
+
+.back-to-top:hover {
+  transform: translateY(-1px);
+}
+
+.back-to-top:active {
+  transform: translateY(0);
 }
 
 /* ---------- Header ---------- */

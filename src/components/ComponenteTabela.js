@@ -15,6 +15,12 @@ const ComponenteTabela = ({
 
   const precoInput = (preco) => preco.replace("R$", "").trim();
 
+  const cursorParaFim = (e) => {
+    const input = e.target;
+    const len = input.value.length;
+    requestAnimationFrame(() => input.setSelectionRange(len, len));
+  };
+
   return (
     <div>
       <div className="cat-label">{titulo}</div>
@@ -78,6 +84,8 @@ const ComponenteTabela = ({
                 inputMode="decimal"
                 value={precoInput(prod.preco)}
                 onChange={(e) => onChangePreco(e.target.value, prod)}
+                onFocus={cursorParaFim}
+                onClick={cursorParaFim}
                 placeholder="0,00"
               />
             </div>
