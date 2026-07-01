@@ -73,8 +73,8 @@ const ComponenteTabela = ({
                     prod.qte === 0
                       ? "#e61919"
                       : !prod.m1 && !prod.m2
-                      ? "orange"
-                      : "",
+                        ? "orange"
+                        : "",
                 }}
               >
                 <span

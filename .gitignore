@@ -11,6 +11,9 @@
 # production
 /build
 
+# refs (modelos/referências locais para leitura, não versionados)
+/refs
+
 # misc
 .DS_Store
 .env.local

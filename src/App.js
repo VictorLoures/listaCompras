@@ -384,10 +384,10 @@ function App() {
               onChange={(e) => setResetarListaOriginal(e.target.checked)}
               checked={resetarListaOriginal}
               style={{ marginRight: "5px", transform: "scale(2)" }}
-              autocomplete="off"
+              autoComplete="off"
             />
 
-            <label for="resetarListaOriginal">
+            <label htmlFor="resetarListaOriginal">
               Resetar para lista original?{" "}
             </label>
           </div>
@@ -495,7 +495,7 @@ function App() {
                 onChange={onChangeProdutoNovo}
                 value={produtoNovo}
                 style={{ position: "relative", bottom: "5px" }}
-                autocomplete="off"
+                autoComplete="off"
               />
             </div>
             <div
@@ -514,9 +514,11 @@ function App() {
                 onChange={(e) => setIncluirPadrao(e.target.checked)}
                 checked={incluirPadrao}
                 style={{ marginRight: "5px", transform: "scale(2)" }}
-                autocomplete="off"
+                autoComplete="off"
               />
-              <label for="incluirPadrao">Incluir produto como padrão? </label>
+              <label htmlFor="incluirPadrao">
+                Incluir produto como padrão?{" "}
+              </label>
             </div>
             <div
               style={{
@@ -533,9 +535,12 @@ function App() {
                 onChange={onChangeCategoria}
                 checked={checkAlimentos}
                 style={{ marginRight: "10px", transform: "scale(2)" }}
-                autocomplete="off"
+                autoComplete="off"
               />
-              <label for={CATEGORIA_ALIMENTOS} style={{ marginRight: "20px" }}>
+              <label
+                htmlFor={CATEGORIA_ALIMENTOS}
+                style={{ marginRight: "20px" }}
+              >
                 Alimentos
               </label>
               <input
@@ -545,9 +550,9 @@ function App() {
                 onChange={onChangeCategoria}
                 checked={checkLimpeza}
                 style={{ marginRight: "10px", transform: "scale(2)" }}
-                autocomplete="off"
+                autoComplete="off"
               />
-              <label for={CATEGORIA_LIMPEZA}>Limpeza</label>
+              <label htmlFor={CATEGORIA_LIMPEZA}>Limpeza</label>
             </div>
 
             {msgProdutoExistente.length > 0 && (
@@ -640,8 +645,8 @@ function App() {
       const qte = adicionar
         ? produtoAtivo.qte + 1
         : produtoAtivo.qte === 0
-        ? 0
-        : produtoAtivo.qte - 1;
+          ? 0
+          : produtoAtivo.qte - 1;
       if (isAlimento) {
         onChangeAlimentos(qte, produtoAtivo, "qte");
       } else {
