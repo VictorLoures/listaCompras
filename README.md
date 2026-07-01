@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://victorloures.github.io/listaCompras/"><b>🔗 Acessar demo ao vivo</b></a>
+  <a href="https://lista-compras-psi.vercel.app/"><b>🔗 Acessar</b></a>
 </p>
 
 ---
@@ -116,20 +116,6 @@ listaCompras/
   `localStorage`, então a lista é restaurada ao reabrir a página.
 - O **Total estimado** soma `quantidade × preço` de todos os itens com quantidade; o **anel** mostra
   a proporção de itens já marcados como pegos.
-
----
-
-## 🌐 Deploy
-
-O projeto está publicado via **GitHub Pages**:
-
-👉 **https://victorloures.github.io/listaCompras/**
-
-Para publicar novamente após mudanças:
-
-```bash
-yarn deploy
-```
 
 ---
 
