@@ -146,18 +146,24 @@ body {
 /* ---------- Busca + ações ---------- */
 .header-actions {
   display: flex;
+  align-items: center;
   gap: 9px;
   margin-bottom: 13px;
 }
 
 .search {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 8px;
   background: var(--bg-card);
   border-radius: 14px;
   padding: 11px 13px;
+}
+
+.search svg {
+  flex: 0 0 auto;
 }
 
 .search input {
@@ -576,4 +582,46 @@ body {
 
 .cat-pill input {
   display: none;
+}
+
+/* ---------- Responsivo (telas estreitas) ---------- */
+@media (max-width: 380px) {
+  .header {
+    padding: 16px 14px 12px;
+  }
+
+  .list {
+    padding: 14px 12px 24px;
+  }
+
+  .header-actions {
+    gap: 7px;
+  }
+
+  .action-btn {
+    width: 42px;
+    height: 42px;
+    font-size: 20px;
+  }
+
+  .action-btn--add {
+    font-size: 24px;
+  }
+
+  .search {
+    padding: 10px 11px;
+  }
+
+  .search input {
+    font-size: 14px;
+  }
+
+  .item-card {
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .price-box input {
+    width: 52px;
+  }
 }
