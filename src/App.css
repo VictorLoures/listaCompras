@@ -50,7 +50,7 @@ body {
 
 .back-to-top {
   position: fixed;
-  left: max(16px, calc(50vw - 214px));
+  right: max(16px, calc(50vw - 214px));
   bottom: 18px;
   width: 46px;
   height: 46px;
