@@ -25,11 +25,13 @@ const ComponenteTabela = ({
     <div>
       <div className="cat-label">{titulo}</div>
       {produtos.map((prod) => (
-        <div className="item-card" key={prod.produto}>
+        <div className="item-card" key={prod.id || prod.produto}>
           <button
+            type="button"
             className={`item-check${prod.m1 ? " is-checked" : ""}`}
             onClick={() => onToggleCheck(prod)}
             aria-label="Já pegou?"
+            aria-pressed={prod.m1}
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
               <path
@@ -50,6 +52,7 @@ const ComponenteTabela = ({
             {prod.isAdicional && (
               <div className="item-adicional-actions">
                 <button
+                  type="button"
                   onClick={() => onClickEditProduto(prod)}
                   className="button-reset"
                   aria-label="Editar produto"
@@ -57,6 +60,7 @@ const ComponenteTabela = ({
                   <i className="bi bi-pen"></i>
                 </button>
                 <button
+                  type="button"
                   onClick={() => onClickRemoverProduto(prod)}
                   className="button-reset"
                   aria-label="Excluir produto"
@@ -69,11 +73,11 @@ const ComponenteTabela = ({
 
           <div className="item-controls">
             <div className="stepper">
-              <button onClick={() => onDec(prod)} aria-label="Diminuir">
+              <button type="button" onClick={() => onDec(prod)} aria-label="Diminuir">
                 −
               </button>
               <span>{prod.qte}</span>
-              <button onClick={() => onInc(prod)} aria-label="Aumentar">
+              <button type="button" onClick={() => onInc(prod)} aria-label="Aumentar">
                 +
               </button>
             </div>

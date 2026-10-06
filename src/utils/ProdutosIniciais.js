@@ -1,5 +1,5 @@
 export const sortArray = (array) => {
-  return array.sort((a, b) => {
+  return [...array].sort((a, b) => {
     const produtoA = a.produto.toLowerCase();
     const produtoB = b.produto.toLowerCase();
     return produtoA.localeCompare(produtoB, "pt-BR");
@@ -164,6 +164,16 @@ export const produtosIniciaisAlimentos = [
     m1: false,
     qte: 0,
     produto: "Creme Craquer",
+    preco: "R$ 0,00",
+    selected: false,
+    originalPadrao: true,
+    resetarPadrao: true,
+    categoria: CATEGORIA_ALIMENTOS,
+  },
+  {
+    m1: false,
+    qte: 0,
+    produto: "Creme Craquer Int.",
     preco: "R$ 0,00",
     selected: false,
     originalPadrao: true,

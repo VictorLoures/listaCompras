@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import "./App.css";
 import {
   sortArray,
@@ -16,12 +16,40 @@ import { toast } from "react-toastify";
 const CHAVE_LOCAL_STORAGE_ALIMENTOS = "produtosAlimentosLocalStorage";
 const CHAVE_LOCAL_STORAGE_LIMPEZA = "produtosLimpezaLocalStorage";
 
+const criarIdProduto = () => {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `produto-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
+const normalizarProdutos = (produtos, categoria) =>
+  produtos.map((produto, index) => ({
+    ...produto,
+    id: produto.id || `${categoria}-${index}-${produto.produto}`,
+    categoria: produto.categoria || categoria,
+  }));
+
+const lerProdutos = (chave, fallback, categoria) => {
+  try {
+    const armazenados = localStorage.getItem(chave);
+    return armazenados
+      ? normalizarProdutos(JSON.parse(armazenados), categoria)
+      : normalizarProdutos(fallback, categoria);
+  } catch {
+    return normalizarProdutos(fallback, categoria);
+  }
+};
+
+const removerAcentos = (produto) =>
+  produto.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
 function App() {
   const [produtosAlimentos, setProdutosAlimentos] = useState(
-    sortArray(produtosIniciaisAlimentos)
+    normalizarProdutos(sortArray(produtosIniciaisAlimentos), CATEGORIA_ALIMENTOS)
   );
   const [produtosLimpeza, setProdutosLimpeza] = useState(
-    sortArray(produtosIniciaisLimpeza)
+    normalizarProdutos(sortArray(produtosIniciaisLimpeza), CATEGORIA_LIMPEZA)
   );
 
   const [produtoNovo, setProdutoNovo] = useState("");
@@ -37,7 +65,7 @@ function App() {
   const [modalIsOpenExcluir, setModalIsOpenExcluir] = useState(false);
   const [produtoSelecionadoExclusao, setProdutoSelecionadoExclusao] =
     useState(null);
-  const [modalIsOpenIncluir, setModalIsOpenIncuir] = useState(false);
+  const [modalIsOpenIncluir, setModalIsOpenIncluir] = useState(false);
 
   const [search, setSearch] = useState("");
   const [filtro, setFiltro] = useState("todos");
@@ -57,12 +85,25 @@ function App() {
       CHAVE_LOCAL_STORAGE_LIMPEZA
     );
 
-    if (produtosAlimentosLocalStorage && produtosLimpezaLocalStorage) {
-      setProdutosAlimentos(JSON.parse(produtosAlimentosLocalStorage));
-      setProdutosLimpeza(JSON.parse(produtosLimpezaLocalStorage));
+    if (produtosAlimentosLocalStorage) {
+      setProdutosAlimentos(
+        lerProdutos(
+          CHAVE_LOCAL_STORAGE_ALIMENTOS,
+          produtosIniciaisAlimentos,
+          CATEGORIA_ALIMENTOS
+        )
+      );
     }
-    const ocultar = JSON.parse(localStorage.getItem("ocultar"));
-    setIsOcultar(ocultar);
+    if (produtosLimpezaLocalStorage) {
+      setProdutosLimpeza(
+        lerProdutos(CHAVE_LOCAL_STORAGE_LIMPEZA, produtosIniciaisLimpeza, CATEGORIA_LIMPEZA)
+      );
+    }
+    try {
+      setIsOcultar(JSON.parse(localStorage.getItem("ocultar")) === true);
+    } catch {
+      setIsOcultar(false);
+    }
     // eslint-disable-next-line
   }, []);
 
@@ -145,31 +186,27 @@ function App() {
     fmtMoney(produto.qte * parsePreco(produto.preco));
 
   const atualizarLista = (valor, produto, idCampo, listaProdutos) => {
-    const objParaAtualizar = listaProdutos.find(
-      (prod) => prod.produto === produto.produto
+    return listaProdutos.map((item) =>
+      (produto.id ? item.id === produto.id : item.produto === produto.produto)
+        ? { ...item, [idCampo]: valor }
+        : item
     );
-
-    const index = listaProdutos.indexOf(objParaAtualizar);
-
-    listaProdutos[index] = {
-      ...listaProdutos[index],
-      [idCampo]: valor,
-    };
-
-    return listaProdutos;
   };
 
   const adicionarProduto = () => {
     setProdutoNovo("");
-    setModalIsOpenIncuir(true);
+    setModalIsOpenIncluir(true);
   };
 
   const adicionarProdutoNaoPadrao = () => {
-    if (categoria) {
+    if (!produtoNovo.trim()) {
+      toast.warning("Informe o nome do produto");
+    } else if (categoria) {
       const categoriaSelecionada = checkAlimentos
         ? CATEGORIA_ALIMENTOS
         : CATEGORIA_LIMPEZA;
       const newProduto = {
+        id: criarIdProduto(),
         m1: false,
         qte: 1,
         produto: produtoNovo,
@@ -188,7 +225,7 @@ function App() {
       novaLista = sortArray(novaLista);
       toast.success("Produto incluido com sucesso");
       atualizarStates(novaLista, setProdutoNovo, isAlimentos);
-      setModalIsOpenIncuir(false);
+      setModalIsOpenIncluir(false);
       atualizarStatesModalProduto();
     } else {
       toast.warning("Selecione uma categoria");
@@ -196,7 +233,7 @@ function App() {
   };
 
   const cancelarAdicionar = () => {
-    setModalIsOpenIncuir(false);
+    setModalIsOpenIncluir(false);
     setProdutoNovo("");
     setMsgProdutoExistente("");
     setIncluirPadrao(false);
@@ -209,7 +246,7 @@ function App() {
       const objParaAtt = produtosLimpeza
         .concat(produtosAlimentos)
         .find((it) => {
-          return it.produto === produtoEditado;
+          return it.id === produtoEditado || it.produto === produtoEditado;
         });
       if (objParaAtt) {
         const newObj = { ...objParaAtt };
@@ -219,10 +256,10 @@ function App() {
           ? CATEGORIA_ALIMENTOS
           : CATEGORIA_LIMPEZA;
         let listaAlimentosAtt = produtosAlimentos.filter(
-          (it) => it.produto !== produtoEditado
+          (it) => it.id !== objParaAtt.id && it.produto !== produtoEditado
         );
         let listaLimpezaAtt = produtosLimpeza.filter(
-          (it) => it.produto !== produtoEditado
+          (it) => it.id !== objParaAtt.id && it.produto !== produtoEditado
         );
         if (categoria === CATEGORIA_ALIMENTOS) {
           listaAlimentosAtt.push(newObj);
@@ -255,7 +292,7 @@ function App() {
   };
 
   const atualizarStatesDeclarados = (funcaoSetState = null) => {
-    setModalIsOpenIncuir(false);
+    setModalIsOpenIncluir(false);
     setIncluirPadrao(false);
     setCategoria(null);
     setCheckAlimentos(false);
@@ -266,9 +303,9 @@ function App() {
   };
 
   const editarProdutoNaoPadrao = (prod) => {
-    setModalIsOpenIncuir(true);
+    setModalIsOpenIncluir(true);
     setProdutoNovo(prod.produto);
-    setProdutoEditado(prod.produto);
+    setProdutoEditado(prod.id || prod.produto);
     setIncluirPadrao(prod.resetarPadrao);
     const isCategoriaAlimentos = prod.categoria === CATEGORIA_ALIMENTOS;
     setCategoria(
@@ -283,10 +320,10 @@ function App() {
       produtoSelecionadoExclusao.categoria === CATEGORIA_ALIMENTOS;
     const novaLista = isAlimentos
       ? produtosAlimentos.filter(
-          (it) => it.produto !== produtoSelecionadoExclusao.produto
+          (it) => it.id !== produtoSelecionadoExclusao.id
         )
       : produtosLimpeza.filter(
-          (it) => it.produto !== produtoSelecionadoExclusao.produto
+          (it) => it.id !== produtoSelecionadoExclusao.id
         );
 
     if (isAlimentos) {
@@ -311,8 +348,8 @@ function App() {
     let pordutosAlimentosJoin = [];
     let pordutosLimpezaJoin = [];
     if (resetarListaOriginal) {
-      pordutosAlimentosJoin = produtosIniciaisAlimentos;
-      pordutosLimpezaJoin = produtosIniciaisLimpeza;
+      pordutosAlimentosJoin = produtosIniciaisAlimentos.map((it) => ({ ...it }));
+      pordutosLimpezaJoin = produtosIniciaisLimpeza.map((it) => ({ ...it }));
     } else {
       pordutosAlimentosJoin = produtosIniciaisAlimentos.concat(
         produtosAlimentos.filter((it) => it.resetarPadrao && !it.originalPadrao)
@@ -322,11 +359,17 @@ function App() {
       );
     }
 
-    pordutosAlimentosJoin.forEach((it) => resetProdutoNaoPadrao(it));
-    pordutosLimpezaJoin.forEach((it) => resetProdutoNaoPadrao(it));
+    pordutosAlimentosJoin = pordutosAlimentosJoin.map(resetProdutoNaoPadrao);
+    pordutosLimpezaJoin = pordutosLimpezaJoin.map(resetProdutoNaoPadrao);
 
-    pordutosAlimentosJoin = sortArray(pordutosAlimentosJoin);
-    pordutosLimpezaJoin = sortArray(pordutosLimpezaJoin);
+    pordutosAlimentosJoin = normalizarProdutos(
+      sortArray(pordutosAlimentosJoin),
+      CATEGORIA_ALIMENTOS
+    );
+    pordutosLimpezaJoin = normalizarProdutos(
+      sortArray(pordutosLimpezaJoin),
+      CATEGORIA_LIMPEZA
+    );
 
     setProdutosAlimentos(pordutosAlimentosJoin);
     setProdutosLimpeza(pordutosLimpezaJoin);
@@ -347,12 +390,14 @@ function App() {
   };
 
   const resetProdutoNaoPadrao = (prod) => {
-    if (!prod.originalPadrao) {
-      prod.qte = 0;
-      prod.preco = "R$ 0,00";
-      prod.selected = false;
-      prod.m1 = false;
+    const produtoResetado = { ...prod };
+    if (!produtoResetado.originalPadrao) {
+      produtoResetado.qte = 0;
+      produtoResetado.preco = "R$ 0,00";
+      produtoResetado.selected = false;
+      produtoResetado.m1 = false;
     }
+    return produtoResetado;
   };
 
   const onChangeProdutoNovo = (e) => {
@@ -364,6 +409,7 @@ function App() {
       );
     const produtoExistente = listaProdutosGeral.find((it) => {
       return (
+        it.id !== produtoEditado &&
         removerAcentos(it.produto).toUpperCase() ===
         removerAcentos(produto).toUpperCase()
       );
@@ -379,10 +425,6 @@ function App() {
 
     setProdutoNovo(produto);
   };
-
-  function removerAcentos(produto) {
-    return produto.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  }
 
   const cancelReset = () => {
     setModalIsOpen(false);
@@ -487,7 +529,7 @@ function App() {
   const modalIncluirProduto = (
     <Modal
       show={modalIsOpenIncluir}
-      onClose={() => setModalIsOpenIncuir(false)}
+      onClose={() => setModalIsOpenIncluir(false)}
       title={produtoEditado.length > 0 ? "Editar produto" : "Incluir novo produto"}
       footer={
         <>
@@ -572,49 +614,66 @@ function App() {
     </Modal>
   );
 
-  const filtrarLista = (lista) => {
-    const q = removerAcentos(search).toLowerCase().trim();
-    return lista.filter((prod) => {
-      if (q && !removerAcentos(prod.produto).toLowerCase().includes(q)) {
-        return false;
-      }
-      if (isOcultar && prod.qte === 0) {
-        return false;
-      }
-      if (filtro === "faltam" && prod.m1) {
-        return false;
-      }
-      if (filtro === "pegos" && !prod.m1) {
-        return false;
-      }
-      return true;
-    });
-  };
+  const resumo = useMemo(() => {
+    const naLista = produtosAlimentos
+      .concat(produtosLimpeza)
+      .filter((prod) => prod.qte > 0);
+    const marcados = naLista.filter((prod) => prod.m1);
+    return {
+      countAll: naLista.length,
+      totalAll: naLista.reduce(
+        (soma, prod) => soma + prod.qte * parsePreco(prod.preco),
+        0
+      ),
+      totalDone: marcados.reduce(
+        (soma, prod) => soma + prod.qte * parsePreco(prod.preco),
+        0
+      ),
+      pct: naLista.length
+        ? Math.round((marcados.length / naLista.length) * 100)
+        : 0,
+    };
+  }, [produtosAlimentos, produtosLimpeza]);
 
-  const alimentosVisiveis = filtrarLista(produtosAlimentos);
-  const limpezaVisiveis = filtrarLista(produtosLimpeza);
-  const semItens =
-    alimentosVisiveis.length === 0 && limpezaVisiveis.length === 0;
+  const filtrarLista = useCallback(
+    (lista) => {
+      const q = removerAcentos(search).toLowerCase().trim();
+      return lista.filter((prod) => {
+        if (q && !removerAcentos(prod.produto).toLowerCase().includes(q)) {
+          return false;
+        }
+        if (isOcultar && prod.qte === 0) {
+          return false;
+        }
+        if (filtro === "faltam" && prod.m1) {
+          return false;
+        }
+        if (filtro === "pegos" && !prod.m1) {
+          return false;
+        }
+        return true;
+      });
+    },
+    [search, isOcultar, filtro]
+  );
 
-  const naLista = produtosAlimentos
-    .concat(produtosLimpeza)
-    .filter((prod) => prod.qte > 0);
-  const countAll = naLista.length;
-  const totalAll = naLista.reduce(
-    (soma, prod) => soma + prod.qte * parsePreco(prod.preco),
-    0
+  const alimentosVisiveis = useMemo(
+    () => filtrarLista(produtosAlimentos),
+    [produtosAlimentos, filtrarLista]
   );
-  const marcados = naLista.filter((prod) => prod.m1);
-  const totalDone = marcados.reduce(
-    (soma, prod) => soma + prod.qte * parsePreco(prod.preco),
-    0
+  const limpezaVisiveis = useMemo(
+    () => filtrarLista(produtosLimpeza),
+    [produtosLimpeza, filtrarLista]
   );
-  const pct = countAll ? Math.round((marcados.length / countAll) * 100) : 0;
+  const semItens = alimentosVisiveis.length === 0 && limpezaVisiveis.length === 0;
+  const { countAll, totalAll, totalDone, pct } = resumo;
 
   const segBtn = (valor, label) => (
     <button
+      type="button"
       className={`seg-btn${filtro === valor ? " is-active" : ""}`}
       onClick={() => setFiltro(valor)}
+      aria-pressed={filtro === valor}
     >
       {label}
     </button>
@@ -679,6 +738,7 @@ function App() {
               />
             </div>
             <button
+              type="button"
               onClick={adicionarProduto}
               className="action-btn action-btn--add"
               aria-label="Incluir produto"
@@ -686,6 +746,7 @@ function App() {
               +
             </button>
             <button
+              type="button"
               onClick={() => ocultaDesocultarProdutos(!isOcultar)}
               className={`action-btn action-btn--ghost${
                 isOcultar ? " is-active" : ""
@@ -695,6 +756,7 @@ function App() {
               <i className={classOcultar}></i>
             </button>
             <button
+              type="button"
               onClick={() => setModalIsOpen(true)}
               className="action-btn action-btn--ghost"
               aria-label="Resetar lista"
@@ -743,6 +805,7 @@ function App() {
 
         {showVoltarTopo && (
           <button
+            type="button"
             className="back-to-top"
             onClick={voltarAoTopo}
             aria-label="Voltar ao topo"

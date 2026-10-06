@@ -9,6 +9,7 @@ const Modal = ({ show, onClose, title, children, footer }) => {
         <div className="modal-header">
           <div className="modal-title">{title}</div>
           <button
+            type="button"
             className="modal-close button-reset"
             onClick={onClose}
             aria-label="Fechar"
