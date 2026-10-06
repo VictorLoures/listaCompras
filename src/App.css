@@ -613,6 +613,91 @@ body {
   display: none;
 }
 
+/* ---------- Calculadora de preço ---------- */
+.calc-opcoes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.calc-opcao {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 16px;
+  padding: 12px;
+  transition: 0.15s;
+}
+
+.calc-opcao.is-vencedora {
+  border-color: var(--green);
+  background: #eef8f2;
+}
+
+.calc-opcao .field-input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 10px;
+}
+
+.calc-opcao-titulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.calc-selo {
+  background: var(--green);
+  color: #fff;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 10px;
+}
+
+.calc-linha {
+  display: flex;
+  gap: 6px;
+}
+
+.calc-linha .calc-quantidade {
+  flex: 1 1 auto;
+}
+
+.calc-linha .calc-unidade {
+  flex: 0 0 62px;
+  padding: 10px 4px;
+}
+
+.calc-por-unidade {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--dark);
+  text-align: center;
+}
+
+.calc-resultado {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--bg-card);
+  color: #4a534c;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.calc-resultado.is-erro {
+  color: var(--danger);
+}
+
 /* ---------- Responsivo (telas estreitas) ---------- */
 @media (max-width: 380px) {
   .header {

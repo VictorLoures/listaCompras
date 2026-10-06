@@ -30,3 +30,19 @@ test("após resetar a lista, altera apenas o produto clicado", () => {
 
   expect(screen.getByText("1 itens")).toBeInTheDocument();
 });
+
+test("calculadora indica qual opção compensa mais", () => {
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Comparar preços" }));
+
+  const preencher = (label, valor) =>
+    fireEvent.change(screen.getByLabelText(label), { target: { value: valor } });
+  preencher("Quantidade da opção A", "1,6");
+  preencher("Preço da opção A", "1599");
+  preencher("Quantidade da opção B", "2,2");
+  preencher("Preço da opção B", "1899");
+
+  expect(screen.getByLabelText("Preço da opção A")).toHaveValue("R$\u00a015,99");
+  expect(screen.getByText(/A opção B sai a/)).toBeInTheDocument();
+  expect(screen.getByText("Compensa")).toBeInTheDocument();
+});

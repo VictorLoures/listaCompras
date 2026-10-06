@@ -11,6 +11,7 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ComponenteTabela from "./components/ComponenteTabela";
 import Modal from "./components/Modal";
+import CalculadoraPreco from "./components/CalculadoraPreco";
 import { toast } from "react-toastify";
 
 const CHAVE_LOCAL_STORAGE_ALIMENTOS = "produtosAlimentosLocalStorage";
@@ -66,6 +67,7 @@ function App() {
   const [produtoSelecionadoExclusao, setProdutoSelecionadoExclusao] =
     useState(null);
   const [modalIsOpenIncluir, setModalIsOpenIncluir] = useState(false);
+  const [modalIsOpenCalculadora, setModalIsOpenCalculadora] = useState(false);
 
   const [search, setSearch] = useState("");
   const [filtro, setFiltro] = useState("todos");
@@ -685,6 +687,10 @@ function App() {
       {modal}
       {modalExcluir}
       {modalIncluirProduto}
+      <CalculadoraPreco
+        show={modalIsOpenCalculadora}
+        onClose={() => setModalIsOpenCalculadora(false)}
+      />
       <div className="card">
         <div className="header">
           <div className="header-top">
@@ -744,6 +750,14 @@ function App() {
               aria-label="Incluir produto"
             >
               +
+            </button>
+            <button
+              type="button"
+              onClick={() => setModalIsOpenCalculadora(true)}
+              className="action-btn action-btn--ghost"
+              aria-label="Comparar preços"
+            >
+              <i className="bi bi-calculator"></i>
             </button>
             <button
               type="button"
