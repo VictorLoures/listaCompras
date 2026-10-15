@@ -1,3 +1,5 @@
+import { centavosDeDigitos, formatarCentavos } from "./dinheiro";
+
 // Cada unidade é convertida para uma unidade base da sua grandeza
 // (g, ml ou un) para que opções em unidades diferentes possam ser comparadas.
 export const UNIDADES = {
@@ -15,14 +17,25 @@ const UNIDADE_EXIBICAO = {
   unidade: { sigla: "un", fator: 1 },
 };
 
-const fmtMoney = (n) =>
-  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+export const ROTULOS_OPCOES = ["A", "B", "C", "D"];
+export const MIN_OPCOES = 2;
+export const MAX_OPCOES = ROTULOS_OPCOES.length;
 
-const fmtNumero = (n) => n.toLocaleString("pt-BR", { maximumFractionDigits: 3 });
+export const opcaoVazia = () => ({
+  quantidade: "",
+  unidade: "kg",
+  preco: "",
+  pacotes: "",
+});
+
+const fmtNumero = (n) =>
+  n.toLocaleString("pt-BR", { maximumFractionDigits: 3 });
+
+const fmtPct = (n) => n.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
 
 // Aceita "1,6", "1.6" e "1.600,5". Com vírgula, os pontos são separador de milhar.
 export const parseNumero = (valor) => {
-  const texto = String(valor).trim();
+  const texto = String(valor ?? "").trim();
   const normalizado = texto.includes(",")
     ? texto.replace(/\./g, "").replace(",", ".")
     : texto;
@@ -30,91 +43,116 @@ export const parseNumero = (valor) => {
   return isNaN(n) ? 0 : n;
 };
 
-export const parsePrecoMascara = (preco) =>
-  parseNumero(String(preco).replace(/[^\d,]/g, ""));
-
+// O preço da calculadora fica como texto mascarado ("R$ 15,99") no formulário.
 export const formatPrecoMascara = (valor) => {
-  const digitos = String(valor).replace(/\D/g, "");
-  if (!digitos) {
-    return "";
-  }
-  return fmtMoney(parseInt(digitos, 10) / 100);
+  const centavos = centavosDeDigitos(valor);
+  return centavos ? formatarCentavos(centavos) : "";
 };
 
-const descreverOpcao = ({ quantidade, unidade }) =>
-  `${fmtNumero(parseNumero(quantidade))} ${unidade}`;
+export const centavosDaMascara = (preco) => centavosDeDigitos(preco);
 
-const precoPorUnidade = ({ quantidade, unidade, preco }) => {
-  const { grandeza, fator } = UNIDADES[unidade];
-  const quantidadeBase = parseNumero(quantidade) * fator;
+// Quantidade de embalagens (ex.: fardo com 6 latas). Vazio conta como 1.
+const numeroDePacotes = (pacotes) => {
+  const n = parseNumero(pacotes);
+  return n > 0 ? n : 1;
+};
+
+export const descreverOpcao = ({ quantidade, unidade, pacotes }) => {
+  const n = numeroDePacotes(pacotes);
+  const base = `${fmtNumero(parseNumero(quantidade))} ${unidade}`;
+  return n > 1 ? `${fmtNumero(n)} × ${base}` : base;
+};
+
+const precoPorUnidade = (opcao) => {
+  const { grandeza, fator } = UNIDADES[opcao.unidade];
+  const quantidadeBase =
+    parseNumero(opcao.quantidade) * fator * numeroDePacotes(opcao.pacotes);
   const exibicao = UNIDADE_EXIBICAO[grandeza];
+  const centavos = centavosDaMascara(opcao.preco);
   return {
     grandeza,
     quantidadeBase,
-    valor: (parsePrecoMascara(preco) / quantidadeBase) * exibicao.fator,
+    centavos,
+    // Centavos por unidade de exibição (por kg, por L ou por un).
+    valor: (centavos / quantidadeBase) * exibicao.fator,
     sigla: exibicao.sigla,
   };
 };
 
 export const opcaoPreenchida = ({ quantidade, preco }) =>
-  parseNumero(quantidade) > 0 && parsePrecoMascara(preco) > 0;
+  parseNumero(quantidade) > 0 && centavosDaMascara(preco) > 0;
 
-// Compara duas opções pelo preço por unidade de medida (R$/kg, R$/L ou R$/un).
-// Retorna null enquanto alguma opção não estiver preenchida.
-export const compararOpcoes = (opcaoA, opcaoB) => {
-  if (!opcaoPreenchida(opcaoA) || !opcaoPreenchida(opcaoB)) {
+// Diferença menor que meio centavo por unidade é considerada empate.
+const EMPATE = 0.5;
+
+// Compara as opções preenchidas pelo preço por unidade de medida
+// (R$/kg, R$/L ou R$/un). Retorna null enquanto houver menos de duas preenchidas.
+export const compararOpcoes = (opcoes) => {
+  const preenchidas = opcoes
+    .map((opcao, i) => ({ opcao, rotulo: ROTULOS_OPCOES[i] }))
+    .filter(({ opcao }) => opcaoPreenchida(opcao));
+
+  if (preenchidas.length < MIN_OPCOES) {
     return null;
   }
 
-  const a = precoPorUnidade(opcaoA);
-  const b = precoPorUnidade(opcaoB);
+  const calculos = preenchidas.map((item) => ({
+    ...item,
+    ...precoPorUnidade(item.opcao),
+  }));
 
-  if (a.grandeza !== b.grandeza) {
+  if (new Set(calculos.map((c) => c.grandeza)).size > 1) {
     return {
       tipo: "incompativel",
       explicacao:
-        "As unidades não são comparáveis (ex.: kg com L). Use a mesma grandeza nas duas opções.",
+        "As unidades não são comparáveis (ex.: kg com L). Use a mesma grandeza em todas as opções.",
     };
   }
 
-  const porUnidade = {
-    A: `${fmtMoney(a.valor)}/${a.sigla}`,
-    B: `${fmtMoney(b.valor)}/${b.sigla}`,
-  };
+  const porUnidade = Object.fromEntries(
+    calculos.map((c) => [c.rotulo, `${formatarCentavos(c.valor)}/${c.sigla}`])
+  );
 
-  // Diferença menor que meio centavo por unidade é considerada empate.
-  if (Math.abs(a.valor - b.valor) < 0.005) {
+  const ordenadas = [...calculos].sort((a, b) => a.valor - b.valor);
+  const [venc, segunda] = ordenadas;
+
+  if (segunda.valor - venc.valor < EMPATE) {
+    const empatadas = ordenadas
+      .filter((c) => c.valor - venc.valor < EMPATE)
+      .map((c) => c.rotulo);
     return {
       tipo: "empate",
+      empatadas,
       porUnidade,
-      explicacao: `As duas saem pelo mesmo preço: ${porUnidade.A}. Escolha a que for render melhor pra você.`,
+      explicacao: `${
+        empatadas.length === calculos.length
+          ? "Todas saem"
+          : `As opções ${empatadas.join(" e ")} saem`
+      } pelo mesmo preço: ${porUnidade[venc.rotulo]}. Escolha a que for render melhor pra você.`,
     };
   }
 
-  const vencedora = a.valor < b.valor ? "A" : "B";
-  const perdedora = vencedora === "A" ? "B" : "A";
-  const opcoes = { A: opcaoA, B: opcaoB };
-  const calculos = { A: a, B: b };
-  const venc = calculos[vencedora];
-  const perd = calculos[perdedora];
-
-  const economiaPct = ((perd.valor - venc.valor) / perd.valor) * 100;
-  // Quanto custaria levar a mesma quantidade da opção vencedora pagando o preço da perdedora.
+  const economiaPct = ((segunda.valor - venc.valor) / segunda.valor) * 100;
+  // Quanto custaria levar a mesma quantidade da vencedora pagando o preço da segunda.
   const custoEquivalente =
-    (perd.valor / UNIDADE_EXIBICAO[venc.grandeza].fator) * venc.quantidadeBase;
-  const diferenca = custoEquivalente - parsePrecoMascara(opcoes[vencedora].preco);
+    (segunda.valor / UNIDADE_EXIBICAO[venc.grandeza].fator) *
+    venc.quantidadeBase;
+  const diferenca = custoEquivalente - venc.centavos;
+  const comparacao =
+    calculos.length > 2
+      ? `a segunda mais barata (opção ${segunda.rotulo}, ${porUnidade[segunda.rotulo]})`
+      : `${porUnidade[segunda.rotulo]} da opção ${segunda.rotulo}`;
 
   return {
     tipo: "vencedora",
-    vencedora,
+    vencedora: venc.rotulo,
+    precoVencedora: venc.centavos,
     porUnidade,
     economiaPct,
     explicacao:
-      `A opção ${vencedora} sai a ${porUnidade[vencedora]}, contra ${porUnidade[perdedora]} ` +
-      `da opção ${perdedora} — ${economiaPct.toLocaleString("pt-BR", {
-        maximumFractionDigits: 1,
-      })}% mais barata. ` +
-      `Levar ${descreverOpcao(opcoes[vencedora])} pelo preço da opção ${perdedora} ` +
-      `custaria ${fmtMoney(custoEquivalente)}, ou seja, ${fmtMoney(diferenca)} a mais.`,
+      `A opção ${venc.rotulo} sai a ${porUnidade[venc.rotulo]}, contra ${comparacao} — ` +
+      `${fmtPct(economiaPct)}% mais barata. ` +
+      `Levar ${descreverOpcao(venc.opcao)} pelo preço da opção ${segunda.rotulo} ` +
+      `custaria ${formatarCentavos(custoEquivalente)}, ou seja, ${formatarCentavos(diferenca)} a mais.`,
   };
 };

@@ -24,3 +24,6 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# playwright (screenshots/snapshots locais)
+/.playwright-mcp
