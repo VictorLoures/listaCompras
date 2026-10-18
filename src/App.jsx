@@ -10,28 +10,78 @@ import ModalConfirmacao from "./components/ModalConfirmacao";
 import ModalProduto from "./components/ModalProduto";
 import ResumoTotal from "./components/ResumoTotal";
 import { avisarComDesfazer } from "./components/ToastDesfazer";
-import { useListaCompras } from "./hooks/useListaCompras";
+import {
+  LISTA_VIAGEM,
+  useLista,
+  useListaCompras,
+} from "./hooks/useListaCompras";
 import { useTelaLigada, wakeLockSuportado } from "./hooks/useTelaLigada";
 import { precoEfetivo } from "./state/lista";
 import { gerarTextoLista, linkWhatsApp } from "./utils/compartilhar";
 import { formatarCentavos } from "./utils/dinheiro";
+import { lerModo, salvarModo } from "./utils/persistencia";
 import { ordenarPorNome } from "./utils/ProdutosIniciais";
 import { normalizarTexto } from "./utils/texto";
 
-const FILTROS = [
-  { id: "todos", texto: "Todos" },
-  { id: "faltam", texto: "Faltam" },
-  { id: "pegos", texto: "Pegos" },
-];
+// Diferenças de texto e comportamento entre os dois modos do app.
+const MODOS = {
+  compras: {
+    id: "compras",
+    rotulo: "Compras",
+    icone: "bi-cart3",
+    titulo: "Minhas compras",
+    comPreco: true,
+    rotuloPego: "Já pegou",
+    filtroPego: "Pegos",
+    textosProduto: { item: "produto", grupo: "Categoria" },
+    duplicadoPorCategoria: false,
+    tituloTexto: "🛒 *Lista de compras*",
+    grupos: {
+      menu: "Renomear categorias",
+      icone: "bi-tags",
+      titulo: "Categorias",
+      contagem: "produto(s)",
+    },
+    resetOriginalDetalhe:
+      "Remove os produtos que você criou e volta os nomes das categorias.",
+  },
+  viagem: {
+    id: "viagem",
+    rotulo: "Viagem",
+    icone: "bi-luggage",
+    titulo: "Minha viagem",
+    comPreco: false,
+    rotuloPego: "Já está na mala",
+    filtroPego: "Na mala",
+    textosProduto: { item: "item", grupo: "Pessoa" },
+    duplicadoPorCategoria: true,
+    tituloTexto: "🧳 *Lista de viagem*",
+    grupos: {
+      menu: "Pessoas",
+      icone: "bi-people",
+      titulo: "Pessoas",
+      contagem: "item(ns)",
+      novo: "Nova pessoa",
+    },
+    resetOriginalDetalhe:
+      "Volta às pessoas e aos itens sugeridos; remove quem e o que você incluiu.",
+  },
+};
 
 function App() {
-  const { produtos, categorias, config, resumo, acoes, comDesfazer } =
-    useListaCompras();
+  const listaCompras = useListaCompras();
+  const listaViagem = useLista(LISTA_VIAGEM);
+
+  const [modoId, setModoId] = useState(lerModo);
+  const modo = MODOS[modoId];
+  const lista = modoId === "viagem" ? listaViagem : listaCompras;
+  const { produtos, categorias, config, resumo, acoes, comDesfazer } = lista;
 
   // Qual modal está aberto (só um por vez) e os dados de contexto de cada um.
   const [modal, setModal] = useState(null);
   const [produtoEmEdicao, setProdutoEmEdicao] = useState(null);
   const [produtoParaExcluir, setProdutoParaExcluir] = useState(null);
+  const [grupoParaExcluir, setGrupoParaExcluir] = useState(null);
   const [resetOriginal, setResetOriginal] = useState(false);
   const [alvoCalculadora, setAlvoCalculadora] = useState(null);
   const [aberturasForm, setAberturasForm] = useState(0);
@@ -42,15 +92,28 @@ function App() {
 
   const fecharModal = useCallback(() => setModal(null), []);
 
-  const tela = useTelaLigada(config.telaLigada);
+  const trocarModo = (novo) => {
+    if (novo === modoId) return;
+    setModoId(novo);
+    salvarModo(novo);
+    setBusca("");
+    setFiltro("todos");
+    setModal(null);
+    window.scrollTo({ top: 0 });
+  };
+
+  // "Manter a tela ligada" vale para o app todo (fica na config de compras).
+  const telaLigada = listaCompras.config.telaLigada;
+  const configurarTela = listaCompras.acoes.configurar;
+  const tela = useTelaLigada(telaLigada);
 
   // Se o navegador recusar manter a tela ligada, avisa e desliga a opção.
   useEffect(() => {
-    if (config.telaLigada && tela.recusado) {
+    if (telaLigada && tela.recusado) {
       toast.error("O navegador não permitiu manter a tela ligada.");
-      acoes.configurar({ telaLigada: false });
+      configurarTela({ telaLigada: false });
     }
-  }, [config.telaLigada, tela.recusado, acoes]);
+  }, [telaLigada, tela.recusado, configurarTela]);
 
   useEffect(() => {
     const onScroll = () => setShowVoltarTopo(window.scrollY > 250);
@@ -88,10 +151,12 @@ function App() {
   const salvarProduto = (dados) => {
     if (produtoEmEdicao) {
       acoes.editarProduto(produtoEmEdicao.id, dados);
-      toast.success("Produto atualizado");
+      toast.success(modo.comPreco ? "Produto atualizado" : "Item atualizado");
     } else {
       acoes.adicionarProduto(dados);
-      toast.success("Produto incluído com sucesso");
+      toast.success(
+        modo.comPreco ? "Produto incluído com sucesso" : "Item incluído"
+      );
       // Limpa a busca/filtro para o item novo aparecer.
       setBusca("");
       setFiltro("todos");
@@ -118,6 +183,25 @@ function App() {
     fecharModal();
   };
 
+  // ---------- Pessoas (modo viagem) ----------
+  const incluirPessoa = (nome) => {
+    acoes.adicionarCategoria(nome);
+    toast.success(`${nome.trim()} incluído(a) com a lista sugerida`);
+  };
+
+  const confirmarExclusaoGrupo = () => {
+    const { desfazer } = comDesfazer(() =>
+      acoes.excluirCategoria(grupoParaExcluir.id)
+    );
+    avisarComDesfazer(`${grupoParaExcluir.nome} removido(a)`, desfazer);
+    setGrupoParaExcluir(null);
+    setModal("categorias");
+  };
+
+  const itensDoGrupo = grupoParaExcluir
+    ? produtos.filter((p) => p.categoria === grupoParaExcluir.id).length
+    : 0;
+
   // ---------- Reset / finalizar ----------
   const confirmarReset = () => {
     const { desfazer } = comDesfazer(() => acoes.resetar(resetOriginal));
@@ -138,7 +222,11 @@ function App() {
 
   // ---------- Compartilhar ----------
   const textoLista = () =>
-    gerarTextoLista(produtos, categorias, { total: resumo.total });
+    gerarTextoLista(produtos, categorias, {
+      total: resumo.total,
+      titulo: modo.tituloTexto,
+      comPreco: modo.comPreco,
+    });
 
   const copiarLista = async () => {
     try {
@@ -152,10 +240,7 @@ function App() {
   const compartilharLista = async () => {
     if (navigator.share) {
       try {
-        await navigator.share({
-          title: "Lista de compras",
-          text: textoLista(),
-        });
+        await navigator.share({ title: modo.titulo, text: textoLista() });
         return;
       } catch (erro) {
         if (erro?.name === "AbortError") return;
@@ -168,7 +253,7 @@ function App() {
     window.open(linkWhatsApp(textoLista()), "_blank", "noopener");
   };
 
-  // ---------- Calculadora ----------
+  // ---------- Calculadora (modo compras) ----------
   const usarPrecoDaCalculadora = (produto, preco) => {
     acoes.definirPreco(produto.id, preco);
     toast.success(
@@ -182,7 +267,7 @@ function App() {
   const faltaram = produtos.filter((p) => p.qte > 0 && !p.pego).length;
 
   const itensMenu = [
-    {
+    modo.comPreco && {
       id: "finalizar",
       icone: "bi-bag-check",
       texto: "Finalizar compra",
@@ -205,27 +290,25 @@ function App() {
       onClick: compartilharLista,
     },
     {
-      id: "categorias",
-      icone: "bi-tags",
-      texto: "Renomear categorias",
+      id: "grupos",
+      icone: modo.grupos.icone,
+      texto: modo.grupos.menu,
       detalhe: categorias.map((c) => c.nome).join(", "),
       onClick: () => setModal("categorias"),
     },
     {
       id: "tela",
-      icone: config.telaLigada
-        ? "bi-brightness-high-fill"
-        : "bi-brightness-high",
-      texto: config.telaLigada
+      icone: telaLigada ? "bi-brightness-high-fill" : "bi-brightness-high",
+      texto: telaLigada
         ? "Desligar tela sempre ligada"
         : "Manter a tela ligada",
       detalhe: !wakeLockSuportado()
         ? "Não disponível neste navegador"
-        : config.telaLigada
+        : telaLigada
           ? "A tela não apaga enquanto o app estiver aberto"
-          : "Para a tela não apagar durante a compra",
+          : "Para a tela não apagar enquanto usa a lista",
       desabilitado: !wakeLockSuportado(),
-      onClick: () => acoes.configurar({ telaLigada: !config.telaLigada }),
+      onClick: () => configurarTela({ telaLigada: !telaLigada }),
     },
     {
       id: "resetar",
@@ -234,25 +317,32 @@ function App() {
       perigo: true,
       onClick: () => setModal("resetar"),
     },
-  ];
+  ].filter(Boolean);
 
   return (
     <div className="app-shell">
-      <ToastContainer autoClose={3000} position="bottom-center" newestOnTop />
+      <ToastContainer
+        autoClose={3000}
+        position="bottom-center"
+        newestOnTop
+        limit={2}
+      />
 
       <ModalProduto
-        key={aberturasForm}
+        key={`${modoId}-${aberturasForm}`}
         show={modal === "produto"}
         produto={produtoEmEdicao}
         categorias={categorias}
         produtos={produtos}
         onSalvar={salvarProduto}
         onClose={fecharModal}
+        textos={modo.textosProduto}
+        duplicadoPorCategoria={modo.duplicadoPorCategoria}
       />
 
       <ModalConfirmacao
         show={modal === "excluir"}
-        titulo="Excluir produto"
+        titulo={`Excluir ${modo.textosProduto.item}`}
         textoConfirmar="Excluir"
         perigo
         onConfirmar={confirmarExclusao}
@@ -265,8 +355,22 @@ function App() {
       </ModalConfirmacao>
 
       <ModalConfirmacao
+        show={modal === "excluirGrupo"}
+        titulo="Remover pessoa"
+        textoConfirmar="Remover"
+        perigo
+        onConfirmar={confirmarExclusaoGrupo}
+        onClose={() => setModal("categorias")}
+      >
+        <p className="modal-text">
+          Remover <strong>{grupoParaExcluir?.nome}</strong> da viagem? Os{" "}
+          {itensDoGrupo} item(ns) da lista dele(a) também saem.
+        </p>
+      </ModalConfirmacao>
+
+      <ModalConfirmacao
         show={modal === "resetar"}
-        titulo="Resetar produtos"
+        titulo="Resetar lista"
         textoConfirmar="Resetar"
         onConfirmar={confirmarReset}
         onClose={() => {
@@ -275,8 +379,9 @@ function App() {
         }}
       >
         <p className="modal-text">
-          Quantidades, preços e marcações voltam a zero. O último preço de cada
-          produto fica guardado como sugestão.
+          {modo.comPreco
+            ? "Quantidades, preços e marcações voltam a zero. O último preço de cada produto fica guardado como sugestão."
+            : "Quantidades e marcações de mala voltam a zero."}
         </p>
         <label className="check-row">
           <input
@@ -286,9 +391,7 @@ function App() {
           />
           <span>
             Resetar para a lista original
-            <small>
-              Remove os produtos que você criou e volta os nomes das categorias.
-            </small>
+            <small>{modo.resetOriginalDetalhe}</small>
           </span>
         </label>
       </ModalConfirmacao>
@@ -313,14 +416,16 @@ function App() {
         )}
       </ModalConfirmacao>
 
-      <CalculadoraPreco
-        show={modal === "calculadora"}
-        onClose={fecharModal}
-        produtos={produtos}
-        alvoId={alvoCalculadora}
-        onMudarAlvo={setAlvoCalculadora}
-        onUsarPreco={usarPrecoDaCalculadora}
-      />
+      {modo.comPreco && (
+        <CalculadoraPreco
+          show={modal === "calculadora"}
+          onClose={fecharModal}
+          produtos={produtos}
+          alvoId={alvoCalculadora}
+          onMudarAlvo={setAlvoCalculadora}
+          onUsarPreco={usarPrecoDaCalculadora}
+        />
+      )}
 
       <MenuAcoes
         show={modal === "menu"}
@@ -329,20 +434,49 @@ function App() {
       />
 
       <ModalCategorias
+        key={modoId}
         show={modal === "categorias"}
         onClose={fecharModal}
         categorias={categorias}
         produtos={produtos}
         acoes={acoes}
+        titulo={modo.grupos.titulo}
+        rotuloContagem={modo.grupos.contagem}
+        rotuloNovo={modo.grupos.novo}
+        onIncluir={modo.comPreco ? undefined : incluirPessoa}
+        onExcluir={
+          modo.comPreco
+            ? undefined
+            : (grupo) => {
+                setGrupoParaExcluir(grupo);
+                setModal("excluirGrupo");
+              }
+        }
       />
 
       <div className="card">
         <header className="header">
+          <div className="modo-switch" role="group" aria-label="Modo do app">
+            {Object.values(MODOS).map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                className={`modo-btn${modoId === m.id ? " is-active" : ""}`}
+                onClick={() => trocarModo(m.id)}
+                aria-pressed={modoId === m.id}
+              >
+                <i className={`bi ${m.icone}`} aria-hidden="true"></i>
+                {m.rotulo}
+              </button>
+            ))}
+          </div>
+
           <div className="header-top">
-            <h1 className="header-title">Minhas compras</h1>
+            <h1 className="header-title">{modo.titulo}</h1>
             <span className="header-count">
-              {resumo.quantidadeItens} itens
-              {config.telaLigada && tela.bloqueado && (
+              {resumo.quantidadeItens}{" "}
+              {resumo.quantidadeItens === 1 ? "item" : "itens"}
+              {telaLigada && tela.bloqueado && (
                 <i
                   className="bi bi-brightness-high header-tela"
                   title="Tela mantida ligada"
@@ -352,7 +486,7 @@ function App() {
             </span>
           </div>
 
-          <ResumoTotal resumo={resumo} />
+          <ResumoTotal resumo={resumo} comPreco={modo.comPreco} />
 
           <div className="header-actions">
             <div className="search">
@@ -390,21 +524,23 @@ function App() {
               type="button"
               onClick={() => abrirFormulario()}
               className="action-btn action-btn--add"
-              aria-label="Incluir produto"
+              aria-label={`Incluir ${modo.textosProduto.item}`}
             >
               +
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                setAlvoCalculadora(null);
-                setModal("calculadora");
-              }}
-              className="action-btn action-btn--ghost"
-              aria-label="Comparar preços"
-            >
-              <i className="bi bi-calculator"></i>
-            </button>
+            {modo.comPreco && (
+              <button
+                type="button"
+                onClick={() => {
+                  setAlvoCalculadora(null);
+                  setModal("calculadora");
+                }}
+                className="action-btn action-btn--ghost"
+                aria-label="Comparar preços"
+              >
+                <i className="bi bi-calculator"></i>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => acoes.configurar({ ocultar: !config.ocultar })}
@@ -429,7 +565,11 @@ function App() {
           </div>
 
           <div className="segmented" role="group" aria-label="Filtrar itens">
-            {FILTROS.map((f) => (
+            {[
+              { id: "todos", texto: "Todos" },
+              { id: "faltam", texto: "Faltam" },
+              { id: "pegos", texto: modo.filtroPego },
+            ].map((f) => (
               <button
                 key={f.id}
                 type="button"
@@ -460,6 +600,9 @@ function App() {
                 onEditar={abrirFormulario}
                 onExcluir={onExcluir}
                 onComparar={onComparar}
+                comPreco={modo.comPreco}
+                rotuloPego={modo.rotuloPego}
+                rotuloComGrupo={modo.duplicadoPorCategoria}
               />
             ))
           )}

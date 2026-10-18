@@ -1,16 +1,48 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
-import { calcularResumo, listaReducer } from "../state/lista";
-import { carregarEstado, salvarEstado } from "../utils/persistencia";
+import {
+  calcularResumo,
+  criarInicialCompras,
+  criarListaReducer,
+} from "../state/lista";
+import {
+  carregarEstado,
+  carregarViagem,
+  CHAVE_ESTADO,
+  CHAVE_VIAGEM,
+  salvarEstado,
+  salvarViagem,
+} from "../utils/persistencia";
+import { criarInicialViagem, criarItensPessoa } from "../utils/ItensViagem";
 import { novoProduto } from "../utils/ProdutosIniciais";
 import { criarId } from "../utils/texto";
 
-// Estado da lista de compras: produtos, categorias e configurações,
-// persistido no localStorage a cada alteração.
-export const useListaCompras = () => {
+// Nome digitado pelo usuário: sem espaços nas pontas nem repetidos no meio.
+const limparNome = (nome) => nome.trim().replace(/\s+/g, " ");
+
+// Como cada modo carrega, salva e recria a lista original.
+export const LISTA_COMPRAS = {
+  chave: CHAVE_ESTADO,
+  carregar: carregarEstado,
+  salvar: salvarEstado,
+  reducer: criarListaReducer(criarInicialCompras),
+};
+
+export const LISTA_VIAGEM = {
+  chave: CHAVE_VIAGEM,
+  carregar: carregarViagem,
+  salvar: salvarViagem,
+  reducer: criarListaReducer(criarInicialViagem),
+  // Pessoa nova já começa com os itens pessoais sugeridos.
+  criarItensGrupo: criarItensPessoa,
+};
+
+// Estado de uma lista (produtos, grupos e configurações), persistido no
+// localStorage a cada alteração. `definicao` é LISTA_COMPRAS ou LISTA_VIAGEM.
+export const useLista = (definicao) => {
   const [estado, dispatch] = useReducer(
-    listaReducer,
+    definicao.reducer,
     undefined,
-    carregarEstado
+    definicao.carregar
   );
 
   // Referência ao estado atual, usada para tirar "fotos" antes de ações
@@ -18,9 +50,23 @@ export const useListaCompras = () => {
   const estadoRef = useRef(estado);
   estadoRef.current = estado;
 
+  const { salvar, criarItensGrupo, chave, carregar } = definicao;
   useEffect(() => {
-    salvarEstado(estado);
-  }, [estado]);
+    salvar(estado);
+  }, [estado, salvar]);
+
+  // Com o app aberto em mais de uma aba (ex.: app instalado + navegador),
+  // cada aba recarrega a lista quando outra salva; senão a última a salvar
+  // apagaria as mudanças da outra.
+  useEffect(() => {
+    const aoMudarEmOutraAba = (e) => {
+      if (e.key === chave && e.newValue) {
+        dispatch({ type: "RESTAURAR", estado: carregar() });
+      }
+    };
+    window.addEventListener("storage", aoMudarEmOutraAba);
+    return () => window.removeEventListener("storage", aoMudarEmOutraAba);
+  }, [chave, carregar]);
 
   const resumo = useMemo(
     () => calcularResumo(estado.produtos),
@@ -37,7 +83,7 @@ export const useListaCompras = () => {
       adicionarProduto: ({ nome, categoria, manterNoReset }) => {
         const produto = novoProduto({
           id: criarId("produto"),
-          nome: nome.trim(),
+          nome: limparNome(nome),
           categoria,
           manterNoReset,
           qte: 1,
@@ -49,7 +95,7 @@ export const useListaCompras = () => {
         dispatch({
           type: "EDITAR",
           id,
-          dados: { nome: nome.trim(), categoria, manterNoReset },
+          dados: { nome: limparNome(nome), categoria, manterNoReset },
         }),
       excluirProduto: (id) => dispatch({ type: "EXCLUIR", id }),
 
@@ -57,11 +103,20 @@ export const useListaCompras = () => {
       finalizarCompra: () => dispatch({ type: "FINALIZAR" }),
 
       renomearCategoria: (id, nome) =>
-        dispatch({ type: "CATEGORIA_RENOMEAR", id, nome: nome.trim() }),
+        dispatch({ type: "CATEGORIA_RENOMEAR", id, nome: limparNome(nome) }),
+      adicionarCategoria: (nome) => {
+        const id = criarId("grupo");
+        dispatch({
+          type: "CATEGORIA_ADICIONAR",
+          categoria: { id, nome: limparNome(nome) },
+          produtos: criarItensGrupo ? criarItensGrupo(id) : [],
+        });
+      },
+      excluirCategoria: (id) => dispatch({ type: "CATEGORIA_EXCLUIR", id }),
 
       configurar: (config) => dispatch({ type: "CONFIG", config }),
     }),
-    []
+    [criarItensGrupo]
   );
 
   // Executa uma ação e devolve uma função que desfaz exatamente ela.
@@ -76,3 +131,5 @@ export const useListaCompras = () => {
 
   return { ...estado, resumo, acoes, comDesfazer };
 };
+
+export const useListaCompras = () => useLista(LISTA_COMPRAS);

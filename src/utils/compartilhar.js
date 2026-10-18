@@ -4,8 +4,13 @@ import { ordenarPorNome } from "./ProdutosIniciais";
 
 // Gera a lista em texto puro, pronta para colar no WhatsApp.
 // Só entram os itens com quantidade; os já pegos aparecem riscados.
-export const gerarTextoLista = (produtos, categorias, { total } = {}) => {
-  const linhas = ["🛒 *Lista de compras*"];
+// No modo viagem (`comPreco: false`) não há valores nem total.
+export const gerarTextoLista = (
+  produtos,
+  categorias,
+  { total, titulo = "🛒 *Lista de compras*", comPreco = true } = {}
+) => {
+  const linhas = [titulo];
 
   categorias.forEach((categoria) => {
     const itens = ordenarPorNome(
@@ -16,7 +21,7 @@ export const gerarTextoLista = (produtos, categorias, { total } = {}) => {
     }
     linhas.push("", `*${categoria.nome}*`);
     itens.forEach((p) => {
-      const preco = precoEfetivo(p);
+      const preco = comPreco ? precoEfetivo(p) : 0;
       const valor = preco ? ` — ${formatarCentavos(p.qte * preco)}` : "";
       const texto = `${p.nome} ×${p.qte}${valor}`;
       linhas.push(p.pego ? `✅ ~${texto}~` : `▫️ ${texto}`);
@@ -25,7 +30,7 @@ export const gerarTextoLista = (produtos, categorias, { total } = {}) => {
 
   if (linhas.length === 1) {
     linhas.push("", "(lista vazia)");
-  } else if (total) {
+  } else if (comPreco && total) {
     linhas.push("", `Total estimado: *${formatarCentavos(total)}*`);
   }
 

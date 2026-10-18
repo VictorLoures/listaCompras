@@ -2,8 +2,12 @@ import { useState } from "react";
 import Modal from "./Modal";
 import { normalizarTexto } from "../utils/texto";
 
+const TEXTOS_PADRAO = { item: "produto", grupo: "Categoria" };
+
 // Formulário de inclusão/edição. O componente pai deve montá-lo com uma `key`
 // diferente a cada abertura, para que o formulário comece do zero.
+// `duplicadoPorCategoria`: o mesmo nome pode existir em grupos diferentes
+// (no modo viagem cada pessoa tem a sua "Camiseta").
 const ModalProduto = ({
   show,
   produto,
@@ -12,7 +16,10 @@ const ModalProduto = ({
   categoriaInicial,
   onSalvar,
   onClose,
+  textos = TEXTOS_PADRAO,
+  duplicadoPorCategoria = false,
 }) => {
+  const Item = textos.item.charAt(0).toUpperCase() + textos.item.slice(1);
   const editando = Boolean(produto);
   const [nome, setNome] = useState(produto?.nome ?? "");
   const [categoria, setCategoria] = useState(
@@ -27,7 +34,9 @@ const ModalProduto = ({
   const duplicado = nomeNormalizado
     ? produtos.find(
         (p) =>
-          p.id !== produto?.id && normalizarTexto(p.nome) === nomeNormalizado
+          p.id !== produto?.id &&
+          normalizarTexto(p.nome) === nomeNormalizado &&
+          (!duplicadoPorCategoria || p.categoria === categoria)
       )
     : null;
   const nomeCategoriaDuplicado = duplicado
@@ -49,7 +58,7 @@ const ModalProduto = ({
     <Modal
       show={show}
       onClose={onClose}
-      title={editando ? "Editar produto" : "Incluir novo produto"}
+      title={editando ? `Editar ${textos.item}` : `Incluir novo ${textos.item}`}
       footer={
         <>
           <button
@@ -72,34 +81,35 @@ const ModalProduto = ({
     >
       <form id="form-produto" onSubmit={salvar} noValidate>
         <div className="modal-field">
-          <label htmlFor="nome-produto">Produto</label>
+          <label htmlFor="nome-produto">{Item}</label>
           <input
             className={`field-input${erroNome ? " is-invalid" : ""}`}
             type="text"
             id="nome-produto"
             onChange={(e) => setNome(e.target.value)}
             value={nome}
-            placeholder="Nome do produto"
+            placeholder={`Nome do ${textos.item}`}
             autoComplete="off"
             autoFocus
             maxLength={60}
           />
           {erroNome && (
             <div className="field-erro" role="alert">
-              Informe o nome do produto.
+              Informe o nome do {textos.item}.
             </div>
           )}
           {duplicado && (
             <div className="field-erro" role="alert">
-              O produto {duplicado.nome} já existe na lista na seção{" "}
-              {nomeCategoriaDuplicado}.
+              {duplicadoPorCategoria
+                ? `${duplicado.nome} já está na lista de ${nomeCategoriaDuplicado}.`
+                : `O ${textos.item} ${duplicado.nome} já existe na lista na seção ${nomeCategoriaDuplicado}.`}
             </div>
           )}
         </div>
 
         <div className="modal-field">
           <span className="modal-field-label" id="rotulo-categoria">
-            Categoria
+            {textos.grupo}
           </span>
           <div
             className="cat-choice"
@@ -132,9 +142,7 @@ const ModalProduto = ({
           />
           <span>
             Manter na lista ao resetar
-            <small>
-              Produtos padrão continuam na lista depois de um reset.
-            </small>
+            <small>Itens marcados continuam na lista depois de um reset.</small>
           </span>
         </label>
       </form>

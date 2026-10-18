@@ -33,7 +33,13 @@ const zerarProduto = (produto, anterior = produto) => ({
   ultimoPreco: anterior ? anterior.preco || anterior.ultimoPreco || 0 : 0,
 });
 
-const resetarProdutos = (estado, original) => {
+// Lista original do modo compras (usada no "resetar para a lista original").
+export const criarInicialCompras = () => ({
+  categorias: CATEGORIAS_INICIAIS.map((c) => ({ ...c })),
+  produtos: criarProdutosIniciais(),
+});
+
+const resetarProdutos = (estado, original, criarInicial) => {
   if (!original) {
     return {
       ...estado,
@@ -47,10 +53,11 @@ const resetarProdutos = (estado, original) => {
   const atuaisPorNome = new Map(
     estado.produtos.map((p) => [normalizarTexto(p.nome), p])
   );
+  const inicial = criarInicial();
   return {
     ...estado,
-    categorias: CATEGORIAS_INICIAIS.map((c) => ({ ...c })),
-    produtos: criarProdutosIniciais().map((p) =>
+    categorias: inicial.categorias,
+    produtos: inicial.produtos.map((p) =>
       zerarProduto(p, atuaisPorNome.get(normalizarTexto(p.nome)) || null)
     ),
   };
@@ -61,7 +68,9 @@ const atualizarProduto = (estado, id, alterar) => ({
   produtos: estado.produtos.map((p) => (p.id === id ? alterar(p) : p)),
 });
 
-export const listaReducer = (estado, acao) => {
+// Cria o reducer de uma lista. `criarInicial` devolve { categorias, produtos }
+// da lista original de cada modo (compras ou viagem).
+export const criarListaReducer = (criarInicial) => (estado, acao) => {
   switch (acao.type) {
     case "QTE":
       return atualizarProduto(estado, acao.id, (p) => ({
@@ -97,7 +106,7 @@ export const listaReducer = (estado, acao) => {
       };
 
     case "RESETAR":
-      return resetarProdutos(estado, acao.original);
+      return resetarProdutos(estado, acao.original, criarInicial);
 
     case "FINALIZAR":
       // Os itens pegos saem da lista (guardando o preço pago como último
@@ -120,6 +129,26 @@ export const listaReducer = (estado, acao) => {
         ),
       };
 
+    case "CATEGORIA_ADICIONAR":
+      return {
+        ...estado,
+        categorias: [...estado.categorias, acao.categoria],
+        produtos: [...estado.produtos, ...(acao.produtos || [])],
+      };
+
+    case "CATEGORIA_EXCLUIR": {
+      // Remove o grupo e os itens dele. Grupos fixos e o último grupo ficam.
+      const alvo = estado.categorias.find((c) => c.id === acao.id);
+      if (!alvo || alvo.fixa || estado.categorias.length <= 1) {
+        return estado;
+      }
+      return {
+        ...estado,
+        categorias: estado.categorias.filter((c) => c.id !== acao.id),
+        produtos: estado.produtos.filter((p) => p.categoria !== acao.id),
+      };
+    }
+
     case "CONFIG":
       return { ...estado, config: { ...estado.config, ...acao.config } };
 
@@ -130,3 +159,5 @@ export const listaReducer = (estado, acao) => {
       return estado;
   }
 };
+
+export const listaReducer = criarListaReducer(criarInicialCompras);

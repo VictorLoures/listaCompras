@@ -130,6 +130,43 @@ h2 {
   border-bottom: 1px solid var(--border);
 }
 
+/* Seletor Compras | Viagem. */
+.modo-switch {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 16px;
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+
+.modo-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: none;
+  border-radius: 999px;
+  padding: 8px 10px;
+  background: transparent;
+  color: var(--text-3);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.15s;
+}
+
+.modo-btn i {
+  font-size: 15px;
+}
+
+.modo-btn.is-active {
+  background: var(--green);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(47, 158, 95, 0.3);
+}
+
 .header-top {
   display: flex;
   align-items: center;
@@ -172,7 +209,9 @@ h2 {
 }
 
 .total-info {
+  flex: 1;
   min-width: 0;
+  container-type: inline-size;
 }
 
 .total-label {
@@ -191,6 +230,9 @@ h2 {
 
 .total-value {
   font-size: 32px;
+  /* Até 32px, mas encolhe para caber na largura disponível (≈0,62em por
+     caractere em Manrope 800). */
+  font-size: min(32px, calc(100cqw / (var(--caracteres, 8) * 0.62)));
   font-weight: 800;
   color: var(--hero-text);
   margin-top: 4px;
@@ -888,6 +930,15 @@ h2 {
 
 .Toastify__close-button {
   color: var(--text);
+}
+
+/* Os espaços entre os avisos não bloqueiam toques na lista. */
+.Toastify__toast-container {
+  pointer-events: none;
+}
+
+.Toastify__toast {
+  pointer-events: auto;
 }
 
 /* Toast como "snackbar" flutuante, acima do botão de voltar ao topo. */

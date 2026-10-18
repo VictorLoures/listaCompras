@@ -1,4 +1,14 @@
-import { carregarEstado, CHAVE_ESTADO, salvarEstado } from "./persistencia";
+import {
+  carregarEstado,
+  carregarViagem,
+  CHAVE_ESTADO,
+  CHAVE_MODO,
+  CHAVE_VIAGEM,
+  lerModo,
+  salvarEstado,
+  salvarModo,
+  salvarViagem,
+} from "./persistencia";
 
 beforeEach(() => {
   localStorage.clear();
@@ -124,4 +134,35 @@ test("descarta histórico, orçamento e tema salvos por versões anteriores", ()
   expect(gravado).not.toHaveProperty("historico");
   expect(gravado.config).not.toHaveProperty("orcamento");
   expect(gravado.config).not.toHaveProperty("tema");
+});
+
+test("viagem é salva numa chave própria, sem mexer nas compras", () => {
+  const compras = carregarEstado();
+  salvarEstado(compras);
+  const viagem = carregarViagem();
+  expect(viagem.config).toEqual({ ocultar: false });
+  viagem.produtos[0].qte = 2;
+  salvarViagem(viagem);
+
+  expect(JSON.parse(localStorage.getItem(CHAVE_VIAGEM)).versao).toBe(1);
+  expect(carregarViagem().produtos[0].qte).toBe(2);
+  expect(carregarEstado().produtos.every((p) => p.qte === 0)).toBe(true);
+  expect(carregarViagem().categorias[0]).toMatchObject({
+    id: "geral",
+    fixa: true,
+  });
+});
+
+test("viagem com dados corrompidos volta à lista sugerida", () => {
+  localStorage.setItem(CHAVE_VIAGEM, "{{lixo");
+  expect(carregarViagem().categorias).toHaveLength(5);
+});
+
+test("lembra o último modo usado", () => {
+  expect(lerModo()).toBe("compras");
+  salvarModo("viagem");
+  expect(localStorage.getItem(CHAVE_MODO)).toBe("viagem");
+  expect(lerModo()).toBe("viagem");
+  localStorage.setItem(CHAVE_MODO, "qualquer");
+  expect(lerModo()).toBe("compras");
 });

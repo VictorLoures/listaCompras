@@ -1,13 +1,14 @@
-import {
-  CATEGORIAS_INICIAIS,
-  criarProdutosIniciais,
-  novoProduto,
-} from "./ProdutosIniciais";
+import { CATEGORIAS_INICIAIS, novoProduto } from "./ProdutosIniciais";
+import { criarInicialCompras } from "../state/lista";
+import { criarInicialViagem } from "./ItensViagem";
 import { centavosDeTexto } from "./dinheiro";
 import { criarId, normalizarTexto } from "./texto";
 
 export const CHAVE_ESTADO = "listaCompras:v2";
 export const VERSAO_ESTADO = 2;
+export const CHAVE_VIAGEM = "listaViagem:v1";
+export const VERSAO_VIAGEM = 1;
+export const CHAVE_MODO = "listaCompras:modo";
 
 // Chaves da versão 1, migradas automaticamente na primeira carga.
 const CHAVES_V1 = {
@@ -16,15 +17,24 @@ const CHAVES_V1 = {
   ocultar: "ocultar",
 };
 
+// "Tela ligada" vale para o app todo e fica guardada na lista de compras.
 export const CONFIG_PADRAO = {
   ocultar: false,
   telaLigada: false,
 };
 
+export const CONFIG_VIAGEM = {
+  ocultar: false,
+};
+
 export const criarEstadoInicial = () => ({
-  produtos: criarProdutosIniciais(),
-  categorias: CATEGORIAS_INICIAIS.map((c) => ({ ...c })),
+  ...criarInicialCompras(),
   config: { ...CONFIG_PADRAO },
+});
+
+export const criarEstadoInicialViagem = () => ({
+  ...criarInicialViagem(),
+  config: { ...CONFIG_VIAGEM },
 });
 
 const lerJson = (chave) => {
@@ -96,18 +106,17 @@ const garantirCategorias = (estado) => {
 
 // Só as configurações conhecidas são aproveitadas; campos de versões
 // anteriores (ex.: orçamento, tema) são descartados.
-const lerConfig = (config) =>
+const lerConfig = (config, configPadrao) =>
   Object.fromEntries(
-    Object.entries(CONFIG_PADRAO).map(([chave, padrao]) => [
+    Object.entries(configPadrao).map(([chave, padrao]) => [
       chave,
       typeof config?.[chave] === typeof padrao ? config[chave] : padrao,
     ])
   );
 
 // Garante que um estado lido do storage tenha todos os campos esperados.
-const completarEstado = (salvo) => {
-  const base = criarEstadoInicial();
-  return garantirCategorias({
+const completarEstado = (salvo, base, configPadrao) =>
+  garantirCategorias({
     produtos: Array.isArray(salvo.produtos)
       ? salvo.produtos.map((p) => ({ ...novoProduto(p), ...p }))
       : base.produtos,
@@ -115,14 +124,23 @@ const completarEstado = (salvo) => {
       Array.isArray(salvo.categorias) && salvo.categorias.length > 0
         ? salvo.categorias
         : base.categorias,
-    config: lerConfig(salvo.config),
+    config: lerConfig(salvo.config, configPadrao),
   });
+
+const gravar = (chave, versao, estado) => {
+  try {
+    localStorage.setItem(chave, JSON.stringify({ versao, ...estado }));
+    return true;
+  } catch {
+    return false;
+  }
 };
 
+// ---------- Compras ----------
 export const carregarEstado = () => {
   const salvo = lerJson(CHAVE_ESTADO);
   if (salvo && salvo.versao === VERSAO_ESTADO) {
-    return completarEstado(salvo);
+    return completarEstado(salvo, criarEstadoInicial(), CONFIG_PADRAO);
   }
 
   const alimentosV1 = lerJson(CHAVES_V1.alimentos);
@@ -135,15 +153,39 @@ export const carregarEstado = () => {
 };
 
 export const salvarEstado = (estado) => {
-  try {
-    localStorage.setItem(
-      CHAVE_ESTADO,
-      JSON.stringify({ versao: VERSAO_ESTADO, ...estado })
-    );
+  const ok = gravar(CHAVE_ESTADO, VERSAO_ESTADO, estado);
+  if (ok) {
     // Depois que a versão nova foi gravada, as chaves antigas não são mais lidas.
     Object.values(CHAVES_V1).forEach((chave) => localStorage.removeItem(chave));
-    return true;
+  }
+  return ok;
+};
+
+// ---------- Viagem ----------
+export const carregarViagem = () => {
+  const salvo = lerJson(CHAVE_VIAGEM);
+  if (salvo && salvo.versao === VERSAO_VIAGEM) {
+    return completarEstado(salvo, criarEstadoInicialViagem(), CONFIG_VIAGEM);
+  }
+  return criarEstadoInicialViagem();
+};
+
+export const salvarViagem = (estado) =>
+  gravar(CHAVE_VIAGEM, VERSAO_VIAGEM, estado);
+
+// ---------- Modo (compras ou viagem) ----------
+export const lerModo = () => {
+  try {
+    return localStorage.getItem(CHAVE_MODO) === "viagem" ? "viagem" : "compras";
   } catch {
-    return false;
+    return "compras";
+  }
+};
+
+export const salvarModo = (modo) => {
+  try {
+    localStorage.setItem(CHAVE_MODO, modo);
+  } catch {
+    // Sem storage o modo só não é lembrado.
   }
 };

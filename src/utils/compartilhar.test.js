@@ -51,3 +51,21 @@ test("lista vazia avisa em vez de mandar só o título", () => {
   expect(texto).toContain("(lista vazia)");
   expect(texto).not.toContain("Total estimado");
 });
+
+test("texto da viagem: título próprio, sem valores nem total", () => {
+  const produtos = [
+    novoProduto({
+      id: "1",
+      nome: "Camiseta",
+      categoria: "victor",
+      qte: 3,
+      preco: 999,
+    }),
+  ];
+  const texto = gerarTextoLista(produtos, [{ id: "victor", nome: "Victor" }], {
+    titulo: "🧳 *Lista de viagem*",
+    comPreco: false,
+    total: 2997,
+  });
+  expect(texto).toBe("🧳 *Lista de viagem*\n\n*Victor*\n▫️ Camiseta ×3");
+});

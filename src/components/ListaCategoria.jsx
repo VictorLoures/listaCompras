@@ -1,6 +1,13 @@
 import ItemProduto from "./ItemProduto";
 
-const ListaCategoria = ({ categoria, produtos, ...handlers }) => {
+// `rotuloComGrupo`: inclui o nome do grupo nos rótulos de acessibilidade,
+// necessário quando o mesmo item aparece em vários grupos (modo viagem).
+const ListaCategoria = ({
+  categoria,
+  produtos,
+  rotuloComGrupo = false,
+  ...handlers
+}) => {
   if (!produtos || produtos.length === 0) {
     return null;
   }
@@ -12,7 +19,12 @@ const ListaCategoria = ({ categoria, produtos, ...handlers }) => {
         <span className="cat-label-count">{produtos.length}</span>
       </h2>
       {produtos.map((produto) => (
-        <ItemProduto key={produto.id} produto={produto} {...handlers} />
+        <ItemProduto
+          key={produto.id}
+          produto={produto}
+          sufixoRotulo={rotuloComGrupo ? ` (${categoria.nome})` : ""}
+          {...handlers}
+        />
       ))}
     </section>
   );

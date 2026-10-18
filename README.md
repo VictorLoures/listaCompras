@@ -45,7 +45,15 @@
 - 💾 **Memória do último preço** — depois de um reset ou de finalizar a compra, o último preço pago fica como sugestão e entra no total estimado.
 - 🧮 **Calculadora "qual compensa mais?"** — compara de 2 a 4 embalagens pelo preço por kg, L ou unidade, inclusive fardos (ex.: 6 × 350 ml), e aplica o preço vencedor direto no item da lista.
 
-**Uso no mercado**
+**Modo viagem** 🧳
+
+- 🔀 **Botão no topo** alterna entre **Compras** e **Viagem**; cada modo tem a própria lista e o app lembra o último usado.
+- 👨‍👩‍👧 **Grupos por pessoa** (Victor, Erica, Helena, Anderson) + **Geral** para o que é da família (documentos, carregador portátil, remédios…).
+- ➕ **Incluir, renomear e remover pessoas** — quem entra já ganha a lista sugerida.
+- 📋 **Lista sugerida** com os itens mais comuns de viagem (roupas, calçados, higiene, eletrônicos), incluindo os mais esquecidos: escova/pasta de dente e carregador.
+- Sem preço: só quantidade e o check **"na mala"**.
+
+**Uso no mercado e na viagem**
 
 - 📲 **PWA offline** — instalável e funciona sem internet depois da primeira visita.
 - 🔆 **Manter a tela ligada** enquanto a lista está aberta (Screen Wake Lock).
@@ -126,8 +134,8 @@ listaCompras/
 
 ## 🧠 Como funciona
 
-- Todo o estado (produtos, categorias e ajustes) fica em uma chave do `localStorage`
-  (`listaCompras:v2`). Na primeira abertura, os dados da versão antiga são migrados automaticamente.
+- A lista de compras fica em `listaCompras:v2` e a de viagem em `listaViagem:v1` no `localStorage`;
+  o modo atual fica em `listaCompras:modo`. Na primeira abertura, os dados da versão antiga são migrados automaticamente.
 - Preços são guardados como **inteiros em centavos**, sem erro de arredondamento.
 - As regras (reset, finalizar compra, categorias…) ficam em um reducer puro em `src/state/lista.js`,
   testado isoladamente.

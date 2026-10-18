@@ -1,4 +1,5 @@
-import { calcularResumo, listaReducer } from "./lista";
+import { calcularResumo, criarListaReducer, listaReducer } from "./lista";
+import { criarInicialViagem, criarItensPessoa } from "../utils/ItensViagem";
 import { criarEstadoInicial } from "../utils/persistencia";
 import { novoProduto } from "../utils/ProdutosIniciais";
 
@@ -94,14 +95,9 @@ test("renomeia categoria sem mudar id nem ordem", () => {
   ]);
 });
 
-test("ações removidas (histórico, categorias) não alteram o estado", () => {
+test("ações removidas (histórico, reordenar) não alteram o estado", () => {
   const estado = estadoCom([produto({ nome: "Arroz" })]);
-  for (const type of [
-    "EXCLUIR_COMPRA",
-    "CATEGORIA_ADICIONAR",
-    "CATEGORIA_EXCLUIR",
-    "CATEGORIA_MOVER",
-  ]) {
+  for (const type of ["EXCLUIR_COMPRA", "CATEGORIA_MOVER"]) {
     expect(listaReducer(estado, { type, id: "limpeza", direcao: -1 })).toBe(
       estado
     );
@@ -120,4 +116,85 @@ test("reset original volta os nomes das categorias", () => {
     "Alimentos",
     "Limpeza",
   ]);
+});
+
+// ---------- Modo viagem ----------
+const viagemReducer = criarListaReducer(criarInicialViagem);
+const estadoViagem = () => ({ ...criarInicialViagem(), config: {} });
+
+test("viagem começa com Geral + 4 pessoas, cada uma com a lista sugerida", () => {
+  const { categorias, produtos } = criarInicialViagem();
+  expect(categorias.map((c) => c.nome)).toEqual([
+    "Geral",
+    "Victor",
+    "Erica",
+    "Helena",
+    "Anderson",
+  ]);
+  expect(categorias[0].fixa).toBe(true);
+  const porGrupo = (id) => produtos.filter((p) => p.categoria === id);
+  expect(porGrupo("geral").map((p) => p.nome)).toContain("Documentos (RG/CNH)");
+  for (const id of ["victor", "erica", "helena", "anderson"]) {
+    const nomes = porGrupo(id).map((p) => p.nome);
+    expect(nomes).toEqual(porGrupo("victor").map((p) => p.nome));
+    expect(nomes).toContain("Escova de dente");
+    expect(nomes).toContain("Carregador de celular");
+  }
+  expect(new Set(produtos.map((p) => p.id)).size).toBe(produtos.length);
+  expect(produtos.every((p) => p.qte === 0 && p.preco === 0)).toBe(true);
+});
+
+test("incluir pessoa adiciona o grupo com os itens sugeridos", () => {
+  const estado = estadoViagem();
+  const depois = viagemReducer(estado, {
+    type: "CATEGORIA_ADICIONAR",
+    categoria: { id: "p1", nome: "Maria" },
+    produtos: criarItensPessoa("p1"),
+  });
+  expect(depois.categorias.at(-1)).toEqual({ id: "p1", nome: "Maria" });
+  const itensMaria = depois.produtos.filter((p) => p.categoria === "p1");
+  expect(itensMaria.length).toBe(
+    estado.produtos.filter((p) => p.categoria === "victor").length
+  );
+  expect(new Set(depois.produtos.map((p) => p.id)).size).toBe(
+    depois.produtos.length
+  );
+});
+
+test("remover pessoa tira o grupo e os itens; Geral e a última pessoa ficam", () => {
+  let estado = estadoViagem();
+  estado = viagemReducer(estado, { type: "CATEGORIA_EXCLUIR", id: "erica" });
+  expect(estado.categorias.map((c) => c.id)).not.toContain("erica");
+  expect(estado.produtos.some((p) => p.categoria === "erica")).toBe(false);
+
+  expect(
+    viagemReducer(estado, { type: "CATEGORIA_EXCLUIR", id: "geral" })
+  ).toBe(estado);
+  expect(viagemReducer(estado, { type: "CATEGORIA_EXCLUIR", id: "x" })).toBe(
+    estado
+  );
+});
+
+test("reset original da viagem volta pessoas e itens sugeridos", () => {
+  let estado = estadoViagem();
+  estado = viagemReducer(estado, { type: "CATEGORIA_EXCLUIR", id: "helena" });
+  estado = viagemReducer(estado, {
+    type: "CATEGORIA_ADICIONAR",
+    categoria: { id: "p1", nome: "Maria" },
+    produtos: criarItensPessoa("p1"),
+  });
+  estado = viagemReducer(estado, {
+    type: "QTE",
+    id: "viagem-victor-camiseta",
+    delta: 3,
+  });
+  const depois = viagemReducer(estado, { type: "RESETAR", original: true });
+  expect(depois.categorias.map((c) => c.nome)).toEqual([
+    "Geral",
+    "Victor",
+    "Erica",
+    "Helena",
+    "Anderson",
+  ]);
+  expect(depois.produtos.every((p) => p.qte === 0)).toBe(true);
 });
