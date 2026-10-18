@@ -2,7 +2,7 @@
 // - Navegação: tenta a rede e cai para o index.html em cache se estiver offline.
 // - Arquivos do app e fontes: servidos do cache e atualizados em segundo plano.
 // Troque a versão para forçar a limpeza dos caches antigos.
-const VERSAO = "v2";
+const VERSAO = "v3";
 const CACHE = `lista-compras-${VERSAO}`;
 const ESSENCIAIS = [
   "./",

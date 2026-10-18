@@ -109,7 +109,7 @@ test("inclui, edita e valida produtos duplicados", async () => {
   expect(produtoSalvo("Vassoura grande")).toBeTruthy();
 });
 
-test("finaliza a compra e mostra no histórico", async () => {
+test("finaliza a compra: pegos saem, o que faltou fica", async () => {
   const user = userEvent.setup();
   render(<App />);
   await user.click(screen.getByRole("button", { name: "Aumentar Café" }));
@@ -118,55 +118,69 @@ test("finaliza a compra e mostra no histórico", async () => {
   await user.click(screen.getByRole("button", { name: "Aumentar Leite" }));
 
   await abrirMenu(user, "Finalizar compra");
-  await user.click(screen.getByRole("button", { name: "Finalizar" }));
+  const dialog = screen.getByRole("dialog");
+  expect(dialog).not.toHaveTextContent(/histórico/i);
+  expect(dialog).toHaveTextContent("1 item(ns) que faltaram");
+  await user.click(within(dialog).getByRole("button", { name: "Finalizar" }));
 
-  expect(salvo().historico).toHaveLength(1);
+  expect(salvo()).not.toHaveProperty("historico");
   expect(produtoSalvo("Café")).toMatchObject({ qte: 0, ultimoPreco: 1790 });
   expect(produtoSalvo("Leite").qte).toBe(1);
+  expect(await screen.findByText("Compra finalizada")).toBeInTheDocument();
 
-  await abrirMenu(user, "Histórico de compras");
+  await user.click(screen.getByRole("button", { name: "Desfazer" }));
+  expect(produtoSalvo("Café")).toMatchObject({ qte: 1, pego: true });
+});
+
+test("menu não tem histórico, ajustes, orçamento nem tema", async () => {
+  const user = userEvent.setup();
+  render(<App />);
+  expect(
+    screen.queryByRole("button", { name: /orçamento/i })
+  ).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Mais ações" }));
+  const menu = screen.getByRole("dialog");
+  for (const removido of [/histórico/i, /ajustes/i, /orçamento/i, /tema/i]) {
+    expect(menu).not.toHaveTextContent(removido);
+  }
+  // jsdom não tem Wake Lock: a opção aparece desabilitada com aviso.
+  expect(
+    within(menu).getByRole("button", { name: /Manter a tela ligada/ })
+  ).toBeDisabled();
+  expect(menu).toHaveTextContent("Não disponível neste navegador");
+  expect(document.documentElement).not.toHaveAttribute("data-theme");
+});
+
+test("categorias: só renomear, sem criar, excluir ou reordenar", async () => {
+  const user = userEvent.setup();
+  render(<App />);
+  await abrirMenu(user, "Renomear categorias");
   const dialog = screen.getByRole("dialog");
-  expect(within(dialog).getByText(/1 compra\(s\)/)).toBeInTheDocument();
-  await user.click(within(dialog).getByRole("tab", { name: "Preços" }));
-  expect(within(dialog).getByText("Café")).toBeInTheDocument();
-});
+  expect(
+    within(dialog).queryByLabelText("Nome da nova categoria")
+  ).not.toBeInTheDocument();
+  expect(
+    within(dialog).queryByRole("button", { name: /Subir|Descer|Excluir/ })
+  ).not.toBeInTheDocument();
 
-test("orçamento mostra o status em texto", async () => {
-  const user = userEvent.setup();
-  render(<App />);
-  await user.click(screen.getByRole("button", { name: /Definir orçamento/ }));
-  await user.type(screen.getByLabelText("Orçamento da compra"), "1000");
-  await user.click(screen.getByRole("button", { name: "Pronto" }));
-
-  await user.click(screen.getByRole("button", { name: "Aumentar Arroz" }));
-  await user.type(screen.getByLabelText("Preço de Arroz"), "900");
-  expect(screen.getByText("Perto do limite")).toBeInTheDocument();
-
-  await user.click(screen.getByRole("button", { name: "Aumentar Arroz" }));
-  expect(screen.getByText("Acima do orçamento")).toBeInTheDocument();
-  expect(await screen.findByText(/passou do orçamento/)).toBeInTheDocument();
-});
-
-test("gerencia categorias", async () => {
-  const user = userEvent.setup();
-  render(<App />);
-  await abrirMenu(user, "Categorias");
-  await user.type(
-    screen.getByLabelText("Nome da nova categoria"),
-    "Hortifruti"
+  await user.click(
+    within(dialog).getByRole("button", { name: "Renomear Limpeza" })
   );
-  await user.click(screen.getByRole("button", { name: "Adicionar" }));
-  await user.click(screen.getByRole("button", { name: "Subir Hortifruti" }));
-  expect(salvo().categorias.map((c) => c.nome)).toEqual([
-    "Alimentos",
-    "Hortifruti",
-    "Limpeza",
+  const campo = within(dialog).getByLabelText("Novo nome para Limpeza");
+  await user.clear(campo);
+  await user.type(campo, "alimentos");
+  expect(within(dialog).getByRole("alert")).toHaveTextContent("Já existe");
+  expect(within(dialog).getByRole("button", { name: "OK" })).toBeDisabled();
+
+  await user.clear(campo);
+  await user.type(campo, "Higiene e limpeza{Enter}");
+  expect(salvo().categorias).toEqual([
+    { id: "alimentos", nome: "Alimentos" },
+    { id: "limpeza", nome: "Higiene e limpeza" },
   ]);
   expect(
-    screen.getByRole("button", { name: "Excluir Alimentos" })
-  ).toBeDisabled();
-  await user.click(screen.getByRole("button", { name: "Excluir Hortifruti" }));
-  expect(salvo().categorias).toHaveLength(2);
+    screen.getByRole("heading", { name: /Higiene e limpeza/ })
+  ).toBeInTheDocument();
 });
 
 test("calculadora indica qual opção compensa e usa o preço na lista", async () => {

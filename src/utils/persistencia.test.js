@@ -11,11 +11,8 @@ test("sem nada salvo, carrega a lista inicial", () => {
     "Alimentos",
     "Limpeza",
   ]);
-  expect(estado.config).toMatchObject({
-    ocultar: false,
-    orcamento: 0,
-    tema: "auto",
-  });
+  expect(estado.config).toEqual({ ocultar: false, telaLigada: false });
+  expect(estado).not.toHaveProperty("historico");
 });
 
 test("migra os dados da versão 1 e remove as chaves antigas", () => {
@@ -100,4 +97,31 @@ test("cria categorias que faltam para não perder produtos", () => {
     "hortifruti",
   ]);
   expect(estado.produtos[0]).toMatchObject({ preco: 0, pego: false });
+});
+
+test("descarta histórico, orçamento e tema salvos por versões anteriores", () => {
+  localStorage.setItem(
+    CHAVE_ESTADO,
+    JSON.stringify({
+      versao: 2,
+      produtos: [{ id: "1", nome: "Arroz", categoria: "alimentos", qte: 2 }],
+      categorias: [
+        { id: "alimentos", nome: "Alimentos" },
+        { id: "limpeza", nome: "Limpeza" },
+      ],
+      historico: [{ id: "c1", data: "2026-10-01", total: 100, itens: [] }],
+      config: { ocultar: true, orcamento: 8000, tema: "escuro", telaLigada: 1 },
+    })
+  );
+  const estado = carregarEstado();
+  expect(estado).not.toHaveProperty("historico");
+  // telaLigada com tipo inválido volta ao padrão.
+  expect(estado.config).toEqual({ ocultar: true, telaLigada: false });
+  expect(estado.produtos[0]).toMatchObject({ nome: "Arroz", qte: 2 });
+
+  salvarEstado(estado);
+  const gravado = JSON.parse(localStorage.getItem(CHAVE_ESTADO));
+  expect(gravado).not.toHaveProperty("historico");
+  expect(gravado.config).not.toHaveProperty("orcamento");
+  expect(gravado.config).not.toHaveProperty("tema");
 });

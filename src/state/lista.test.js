@@ -1,9 +1,4 @@
-import {
-  calcularResumo,
-  listaReducer,
-  montarCompra,
-  ultimoPrecoNoHistorico,
-} from "./lista";
+import { calcularResumo, listaReducer } from "./lista";
 import { criarEstadoInicial } from "../utils/persistencia";
 import { novoProduto } from "../utils/ProdutosIniciais";
 
@@ -23,18 +18,15 @@ test("quantidade nunca fica negativa", () => {
 });
 
 test("o resumo usa o último preço quando o preço não foi digitado", () => {
-  const resumo = calcularResumo(
-    [
-      produto({ nome: "Arroz", qte: 2, preco: 1000 }),
-      produto({ nome: "Feijão", qte: 1, ultimoPreco: 850 }),
-      produto({ nome: "Sal", qte: 0, preco: 300 }),
-    ],
-    4000
-  );
+  const resumo = calcularResumo([
+    produto({ nome: "Arroz", qte: 2, preco: 1000 }),
+    produto({ nome: "Feijão", qte: 1, ultimoPreco: 850 }),
+    produto({ nome: "Sal", qte: 0, preco: 300 }),
+  ]);
   expect(resumo.total).toBe(2850);
   expect(resumo.usaEstimativa).toBe(true);
   expect(resumo.quantidadeItens).toBe(2);
-  expect(resumo.pctOrcamento).toBe(71);
+  expect(resumo).not.toHaveProperty("pctOrcamento");
 });
 
 test("reset guarda o último preço pago e remove produtos não padrão", () => {
@@ -68,67 +60,64 @@ test("reset para a lista original mantém a memória de preço pelo nome", () =>
   expect(depois.produtos.length).toBeGreaterThan(70);
 });
 
-test("finalizar guarda os pegos no histórico e mantém o que faltou", () => {
-  const produtos = [
+test("finalizar tira os pegos da lista e mantém o que faltou", () => {
+  const estado = estadoCom([
     { ...produto({ nome: "Arroz", qte: 2, preco: 1000 }), pego: true },
     produto({ nome: "Feijão", qte: 1, preco: 850 }),
     {
       ...produto({ nome: "Bolo", qte: 1, preco: 1500, manterNoReset: false }),
       pego: true,
     },
-  ];
-  const estado = estadoCom(produtos);
-  const compra = montarCompra(produtos, estado.categorias, {
-    id: "c1",
-    data: "2026-10-01T10:00:00.000Z",
-  });
-  expect(compra.total).toBe(3500);
-  expect(compra.itens).toHaveLength(2);
-  expect(compra.itens[0].categoria).toBe("Alimentos");
-
-  const depois = listaReducer(estado, { type: "FINALIZAR", compra });
-  expect(depois.historico).toHaveLength(1);
+  ]);
+  const depois = listaReducer(estado, { type: "FINALIZAR" });
+  expect(depois).not.toHaveProperty("historico");
   expect(depois.produtos.map((p) => p.nome)).toEqual(["Arroz", "Feijão"]);
-  expect(depois.produtos[0]).toMatchObject({ qte: 0, ultimoPreco: 1000 });
+  expect(depois.produtos[0]).toMatchObject({
+    qte: 0,
+    preco: 0,
+    pego: false,
+    ultimoPreco: 1000,
+  });
   expect(depois.produtos[1]).toMatchObject({ qte: 1, preco: 850 });
 });
 
-test("procura o último preço de um produto no histórico", () => {
-  const historico = [
-    { id: "1", data: "2026-08-01", itens: [{ nome: "Café", preco: 1500 }] },
-    { id: "2", data: "2026-09-01", itens: [{ nome: "cafe", preco: 1790 }] },
-    { id: "3", data: "2026-10-01", itens: [{ nome: "Leite", preco: 500 }] },
-  ];
-  expect(ultimoPrecoNoHistorico(historico, "Café")).toBe(1790);
-  expect(ultimoPrecoNoHistorico(historico, "Pão")).toBe(0);
-});
-
-test("não exclui categoria com produtos nem a última categoria", () => {
+test("renomeia categoria sem mudar id nem ordem", () => {
   const estado = estadoCom([produto({ nome: "Arroz" })]);
-  expect(
-    listaReducer(estado, { type: "CATEGORIA_EXCLUIR", id: "alimentos" })
-  ).toBe(estado);
-
-  const semLimpeza = listaReducer(estado, {
-    type: "CATEGORIA_EXCLUIR",
+  const depois = listaReducer(estado, {
+    type: "CATEGORIA_RENOMEAR",
     id: "limpeza",
+    nome: "Higiene e limpeza",
   });
-  expect(semLimpeza.categorias.map((c) => c.id)).toEqual(["alimentos"]);
+  expect(depois.categorias).toEqual([
+    { id: "alimentos", nome: "Alimentos" },
+    { id: "limpeza", nome: "Higiene e limpeza" },
+  ]);
 });
 
-test("move categorias respeitando os limites", () => {
-  const estado = estadoCom([]);
-  const movida = listaReducer(estado, {
-    type: "CATEGORIA_MOVER",
-    id: "limpeza",
-    direcao: -1,
+test("ações removidas (histórico, categorias) não alteram o estado", () => {
+  const estado = estadoCom([produto({ nome: "Arroz" })]);
+  for (const type of [
+    "EXCLUIR_COMPRA",
+    "CATEGORIA_ADICIONAR",
+    "CATEGORIA_EXCLUIR",
+    "CATEGORIA_MOVER",
+  ]) {
+    expect(listaReducer(estado, { type, id: "limpeza", direcao: -1 })).toBe(
+      estado
+    );
+  }
+});
+
+test("reset original volta os nomes das categorias", () => {
+  const estado = estadoCom([], {
+    categorias: [
+      { id: "alimentos", nome: "Comida" },
+      { id: "limpeza", nome: "Casa" },
+    ],
   });
-  expect(movida.categorias.map((c) => c.id)).toEqual(["limpeza", "alimentos"]);
-  expect(
-    listaReducer(movida, {
-      type: "CATEGORIA_MOVER",
-      id: "limpeza",
-      direcao: -1,
-    }).categorias
-  ).toEqual(movida.categorias);
+  const depois = listaReducer(estado, { type: "RESETAR", original: true });
+  expect(depois.categorias.map((c) => c.nome)).toEqual([
+    "Alimentos",
+    "Limpeza",
+  ]);
 });

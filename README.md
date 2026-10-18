@@ -32,26 +32,24 @@
 
 **Lista**
 
-- 🗂️ **Categorias personalizáveis** — crie, renomeie, exclua e reordene (ex.: na ordem dos corredores do seu mercado).
+- 🗂️ **Categorias** — Alimentos e Limpeza, com opção de renomear.
 - ➕➖ **Quantidade e preço por item** — preço digitado em centavos (`0,01` → `0,13` → `1,35`) com total por linha.
 - ✅ **Marcar como "pego"** — risca o item e alimenta o anel de progresso.
 - 🔎 **Busca** sem acentos, **filtro** Todos / Faltam / Pegos e **ocultar zerados**.
 - 📝 **Incluir, editar e excluir** qualquer produto (inclusive os padrão), com aviso de nome duplicado.
+- ✔️ **Finalizar compra** — os itens pegos saem da lista e o que faltou continua para a próxima ida.
 - ↩️ **Desfazer** exclusões, resets e compras finalizadas.
 
 **Dinheiro**
 
 - 💾 **Memória do último preço** — depois de um reset ou de finalizar a compra, o último preço pago fica como sugestão e entra no total estimado.
-- 💰 **Orçamento** — barra de uso com aviso perto do limite (80%) e ao passar dele.
 - 🧮 **Calculadora "qual compensa mais?"** — compara de 2 a 4 embalagens pelo preço por kg, L ou unidade, inclusive fardos (ex.: 6 × 350 ml), e aplica o preço vencedor direto no item da lista.
-- 🧾 **Histórico de compras** — "Finalizar compra" guarda os itens pegos; veja gastos por mês e a variação de preço de cada produto.
 
 **Uso no mercado**
 
 - 📲 **PWA offline** — instalável e funciona sem internet depois da primeira visita.
 - 🔆 **Manter a tela ligada** enquanto a lista está aberta (Screen Wake Lock).
 - 💬 **Compartilhar** a lista pelo WhatsApp ou copiar como texto.
-- 🌙 **Tema claro, escuro ou automático.**
 - 📱 **Responsivo** — mobile-first, de 320px ao desktop.
 
 ---
@@ -59,7 +57,7 @@
 ## 🛠️ Tecnologias
 
 - [React 18](https://react.dev/) + [Vite](https://vite.dev/)
-- CSS puro com variáveis de tema (design tokens, claro/escuro)
+- CSS puro com variáveis de cor (design tokens)
 - [Bootstrap Icons](https://icons.getbootstrap.com/) (empacotados localmente, para funcionar offline)
 - [React Toastify](https://fkhadra.github.io/react-toastify/) — notificações com "Desfazer"
 - `localStorage` para persistência, com migração automática dos dados da versão anterior
@@ -113,15 +111,14 @@ listaCompras/
 ├── src/
 │   ├── main.jsx                # Entrada: monta o App e registra o service worker
 │   ├── App.jsx                 # Layout e orquestração dos modais
-│   ├── App.css                 # Estilos e tokens de tema
-│   ├── components/             # Item, total/orçamento, modais, calculadora, histórico…
+│   ├── App.css                 # Estilos e tokens de cor
+│   ├── components/             # Item, total, modais, calculadora, menu…
 │   ├── hooks/
 │   │   ├── useListaCompras.js  # Estado + persistência + desfazer
-│   │   ├── useTelaLigada.js    # Screen Wake Lock
-│   │   └── useTema.js          # Tema claro/escuro/automático
+│   │   └── useTelaLigada.js    # Screen Wake Lock
 │   ├── state/lista.js          # Reducer puro com as regras de negócio
 │   └── utils/                  # Dinheiro (centavos), persistência/migração,
-│                               # calculadora, histórico, compartilhar, produtos iniciais
+│                               # calculadora, compartilhar, produtos iniciais
 └── package.json
 ```
 
@@ -129,15 +126,15 @@ listaCompras/
 
 ## 🧠 Como funciona
 
-- Todo o estado (produtos, categorias, histórico e ajustes) fica em uma chave do `localStorage`
+- Todo o estado (produtos, categorias e ajustes) fica em uma chave do `localStorage`
   (`listaCompras:v2`). Na primeira abertura, os dados da versão antiga são migrados automaticamente.
 - Preços são guardados como **inteiros em centavos**, sem erro de arredondamento.
 - As regras (reset, finalizar compra, categorias…) ficam em um reducer puro em `src/state/lista.js`,
   testado isoladamente.
 - **Reset**: zera quantidades, preços e marcações; mantém só os produtos marcados como
   "manter na lista" e guarda o último preço pago como sugestão.
-- **Finalizar compra**: os itens pegos vão para o histórico e saem da lista; o que faltou continua
-  para a próxima compra.
+- **Finalizar compra**: os itens pegos saem da lista (o preço pago vira sugestão); o que faltou
+  continua para a próxima compra.
 
 ---
 

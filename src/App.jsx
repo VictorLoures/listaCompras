@@ -1,24 +1,20 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./App.css";
 import CalculadoraPreco from "./components/CalculadoraPreco";
 import ListaCategoria from "./components/ListaCategoria";
 import MenuAcoes from "./components/MenuAcoes";
-import ModalAjustes from "./components/ModalAjustes";
 import ModalCategorias from "./components/ModalCategorias";
 import ModalConfirmacao from "./components/ModalConfirmacao";
-import ModalHistorico from "./components/ModalHistorico";
 import ModalProduto from "./components/ModalProduto";
 import ResumoTotal from "./components/ResumoTotal";
 import { avisarComDesfazer } from "./components/ToastDesfazer";
 import { useListaCompras } from "./hooks/useListaCompras";
-import { useTelaLigada } from "./hooks/useTelaLigada";
-import { useTema } from "./hooks/useTema";
+import { useTelaLigada, wakeLockSuportado } from "./hooks/useTelaLigada";
 import { precoEfetivo } from "./state/lista";
 import { gerarTextoLista, linkWhatsApp } from "./utils/compartilhar";
 import { formatarCentavos } from "./utils/dinheiro";
-import { formatarData } from "./utils/historico";
 import { ordenarPorNome } from "./utils/ProdutosIniciais";
 import { normalizarTexto } from "./utils/texto";
 
@@ -29,21 +25,13 @@ const FILTROS = [
 ];
 
 function App() {
-  const {
-    produtos,
-    categorias,
-    historico,
-    config,
-    resumo,
-    acoes,
-    comDesfazer,
-  } = useListaCompras();
+  const { produtos, categorias, config, resumo, acoes, comDesfazer } =
+    useListaCompras();
 
   // Qual modal está aberto (só um por vez) e os dados de contexto de cada um.
   const [modal, setModal] = useState(null);
   const [produtoEmEdicao, setProdutoEmEdicao] = useState(null);
   const [produtoParaExcluir, setProdutoParaExcluir] = useState(null);
-  const [compraParaExcluir, setCompraParaExcluir] = useState(null);
   const [resetOriginal, setResetOriginal] = useState(false);
   const [alvoCalculadora, setAlvoCalculadora] = useState(null);
   const [aberturasForm, setAberturasForm] = useState(0);
@@ -54,8 +42,15 @@ function App() {
 
   const fecharModal = useCallback(() => setModal(null), []);
 
-  useTema(config.tema);
   const tela = useTelaLigada(config.telaLigada);
+
+  // Se o navegador recusar manter a tela ligada, avisa e desliga a opção.
+  useEffect(() => {
+    if (config.telaLigada && tela.recusado) {
+      toast.error("O navegador não permitiu manter a tela ligada.");
+      acoes.configurar({ telaLigada: false });
+    }
+  }, [config.telaLigada, tela.recusado, acoes]);
 
   useEffect(() => {
     const onScroll = () => setShowVoltarTopo(window.scrollY > 250);
@@ -63,19 +58,6 @@ function App() {
     onScroll();
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
-
-  // Avisa uma vez quando o total estimado passa do orçamento.
-  const pctOrcamentoAnterior = useRef(resumo.pctOrcamento);
-  useEffect(() => {
-    const anterior = pctOrcamentoAnterior.current;
-    pctOrcamentoAnterior.current = resumo.pctOrcamento;
-    if (resumo.orcamento > 0 && anterior <= 100 && resumo.pctOrcamento > 100) {
-      toast.warning(
-        `O total estimado passou do orçamento de ${formatarCentavos(resumo.orcamento)}.`,
-        { toastId: "orcamento" }
-      );
-    }
-  }, [resumo.pctOrcamento, resumo.orcamento]);
 
   const visiveisPorCategoria = useMemo(() => {
     const q = normalizarTexto(busca);
@@ -108,12 +90,8 @@ function App() {
       acoes.editarProduto(produtoEmEdicao.id, dados);
       toast.success("Produto atualizado");
     } else {
-      const novo = acoes.adicionarProduto(dados);
-      toast.success(
-        novo.ultimoPreco
-          ? `Produto incluído (último preço: ${formatarCentavos(novo.ultimoPreco)})`
-          : "Produto incluído com sucesso"
-      );
+      acoes.adicionarProduto(dados);
+      toast.success("Produto incluído com sucesso");
       // Limpa a busca/filtro para o item novo aparecer.
       setBusca("");
       setFiltro("todos");
@@ -152,24 +130,10 @@ function App() {
   };
 
   const confirmarFinalizar = () => {
-    const { resultado: compra, desfazer } = comDesfazer(() =>
-      acoes.finalizarCompra()
-    );
-    avisarComDesfazer(
-      `Compra de ${formatarCentavos(compra.total)} salva no histórico`,
-      desfazer
-    );
+    const { desfazer } = comDesfazer(() => acoes.finalizarCompra());
+    avisarComDesfazer("Compra finalizada", desfazer);
     setFiltro("todos");
     fecharModal();
-  };
-
-  const confirmarExclusaoCompra = () => {
-    const { desfazer } = comDesfazer(() =>
-      acoes.excluirCompra(compraParaExcluir.id)
-    );
-    avisarComDesfazer("Compra excluída do histórico", desfazer);
-    setCompraParaExcluir(null);
-    setModal("historico");
   };
 
   // ---------- Compartilhar ----------
@@ -223,7 +187,7 @@ function App() {
       icone: "bi-bag-check",
       texto: "Finalizar compra",
       detalhe: pegos.length
-        ? `Guarda ${pegos.length} item(ns) pego(s) no histórico`
+        ? `Tira ${pegos.length} item(ns) pego(s) da lista`
         : "Marque os itens pegos primeiro",
       desabilitado: pegos.length === 0,
       onClick: () => setModal("finalizar"),
@@ -241,29 +205,27 @@ function App() {
       onClick: compartilharLista,
     },
     {
-      id: "historico",
-      icone: "bi-clock-history",
-      texto: "Histórico de compras",
-      detalhe: historico.length
-        ? `${historico.length} compra(s) · última em ${formatarData(
-            historico[historico.length - 1].data
-          )}`
-        : "Nenhuma compra ainda",
-      onClick: () => setModal("historico"),
-    },
-    {
       id: "categorias",
       icone: "bi-tags",
-      texto: "Categorias",
+      texto: "Renomear categorias",
       detalhe: categorias.map((c) => c.nome).join(", "),
       onClick: () => setModal("categorias"),
     },
     {
-      id: "ajustes",
-      icone: "bi-sliders",
-      texto: "Ajustes",
-      detalhe: "Orçamento, tema e tela ligada",
-      onClick: () => setModal("ajustes"),
+      id: "tela",
+      icone: config.telaLigada
+        ? "bi-brightness-high-fill"
+        : "bi-brightness-high",
+      texto: config.telaLigada
+        ? "Desligar tela sempre ligada"
+        : "Manter a tela ligada",
+      detalhe: !wakeLockSuportado()
+        ? "Não disponível neste navegador"
+        : config.telaLigada
+          ? "A tela não apaga enquanto o app estiver aberto"
+          : "Para a tela não apagar durante a compra",
+      desabilitado: !wakeLockSuportado(),
+      onClick: () => acoes.configurar({ telaLigada: !config.telaLigada }),
     },
     {
       id: "resetar",
@@ -324,7 +286,9 @@ function App() {
           />
           <span>
             Resetar para a lista original
-            <small>Remove produtos e categorias que você criou.</small>
+            <small>
+              Remove os produtos que você criou e volta os nomes das categorias.
+            </small>
           </span>
         </label>
       </ModalConfirmacao>
@@ -338,7 +302,8 @@ function App() {
       >
         <p className="modal-text">
           Os <strong>{pegos.length}</strong> itens pegos (
-          {formatarCentavos(totalPegos)}) vão para o histórico e saem da lista.
+          {formatarCentavos(totalPegos)}) saem da lista. O preço pago fica
+          guardado como sugestão para a próxima vez.
         </p>
         {faltaram > 0 && (
           <p className="modal-text modal-text--sutil">
@@ -346,22 +311,6 @@ function App() {
             compra.
           </p>
         )}
-      </ModalConfirmacao>
-
-      <ModalConfirmacao
-        show={modal === "excluirCompra"}
-        titulo="Excluir compra"
-        textoConfirmar="Excluir"
-        perigo
-        onConfirmar={confirmarExclusaoCompra}
-        onClose={() => setModal("historico")}
-      >
-        <p className="modal-text">
-          Excluir a compra de{" "}
-          {compraParaExcluir && formatarData(compraParaExcluir.data)} (
-          {compraParaExcluir && formatarCentavos(compraParaExcluir.total)}) do
-          histórico?
-        </p>
       </ModalConfirmacao>
 
       <CalculadoraPreco
@@ -379,30 +328,12 @@ function App() {
         itens={itensMenu}
       />
 
-      <ModalHistorico
-        show={modal === "historico"}
-        onClose={fecharModal}
-        historico={historico}
-        onExcluirCompra={(compra) => {
-          setCompraParaExcluir(compra);
-          setModal("excluirCompra");
-        }}
-      />
-
       <ModalCategorias
         show={modal === "categorias"}
         onClose={fecharModal}
         categorias={categorias}
         produtos={produtos}
         acoes={acoes}
-      />
-
-      <ModalAjustes
-        show={modal === "ajustes"}
-        onClose={fecharModal}
-        config={config}
-        onConfigurar={acoes.configurar}
-        tela={tela}
       />
 
       <div className="card">
@@ -421,10 +352,7 @@ function App() {
             </span>
           </div>
 
-          <ResumoTotal
-            resumo={resumo}
-            onEditarOrcamento={() => setModal("ajustes")}
-          />
+          <ResumoTotal resumo={resumo} />
 
           <div className="header-actions">
             <div className="search">

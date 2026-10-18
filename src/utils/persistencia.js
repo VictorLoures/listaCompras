@@ -18,15 +18,12 @@ const CHAVES_V1 = {
 
 export const CONFIG_PADRAO = {
   ocultar: false,
-  orcamento: 0,
-  tema: "auto",
   telaLigada: false,
 };
 
 export const criarEstadoInicial = () => ({
   produtos: criarProdutosIniciais(),
   categorias: CATEGORIAS_INICIAIS.map((c) => ({ ...c })),
-  historico: [],
   config: { ...CONFIG_PADRAO },
 });
 
@@ -97,6 +94,16 @@ const garantirCategorias = (estado) => {
   };
 };
 
+// Só as configurações conhecidas são aproveitadas; campos de versões
+// anteriores (ex.: orçamento, tema) são descartados.
+const lerConfig = (config) =>
+  Object.fromEntries(
+    Object.entries(CONFIG_PADRAO).map(([chave, padrao]) => [
+      chave,
+      typeof config?.[chave] === typeof padrao ? config[chave] : padrao,
+    ])
+  );
+
 // Garante que um estado lido do storage tenha todos os campos esperados.
 const completarEstado = (salvo) => {
   const base = criarEstadoInicial();
@@ -108,8 +115,7 @@ const completarEstado = (salvo) => {
       Array.isArray(salvo.categorias) && salvo.categorias.length > 0
         ? salvo.categorias
         : base.categorias,
-    historico: Array.isArray(salvo.historico) ? salvo.historico : [],
-    config: { ...CONFIG_PADRAO, ...(salvo.config || {}) },
+    config: lerConfig(salvo.config),
   });
 };
 

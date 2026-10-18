@@ -1,7 +1,7 @@
 {
   "short_name": "Compras",
   "name": "Lista de Compras",
-  "description": "Lista de compras com preços, orçamento, histórico e comparador de preço.",
+  "description": "Lista de compras com preços, último preço pago e comparador de preço.",
   "lang": "pt-BR",
   "icons": [
     {
